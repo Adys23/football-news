@@ -8,8 +8,8 @@ import { run } from "./lib/run.mjs";
 const PATTERNS = [
   { name: "klucz OpenAI", regex: /\bsk-[A-Za-z0-9_-]{20,}/ },
   { name: "JWT (anon/service_role)", regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./ },
-  { name: "wypelniony SERVICE_ROLE_KEY", regex: /SERVICE_ROLE_KEY\s*=\s*\S+/ },
-  { name: "wypelniony OPENAI_API_KEY", regex: /OPENAI_API_KEY\s*=\s*\S+/ },
+  { name: "wypelniony SERVICE_ROLE_KEY", regex: /SERVICE_ROLE_KEY\s*=\s*(?!#)\S+/ },
+  { name: "wypelniony OPENAI_API_KEY", regex: /OPENAI_API_KEY\s*=\s*(?!#)\S+/ },
   { name: "NEXT_PUBLIC z wrazliwa nazwa", regex: /NEXT_PUBLIC_\w*(SERVICE_ROLE|SECRET|API_KEY)/ },
   { name: "prywatny klucz", regex: /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
 ];

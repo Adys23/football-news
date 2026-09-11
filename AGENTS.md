@@ -137,8 +137,10 @@ Wszystkie nowe zmienne dopisz do `.env.example` z placeholderem i krótkim opise
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_SITE_URL=
-SUPABASE_SERVICE_ROLE_KEY=      # tylko serwer / Edge Functions
-OPENAI_API_KEY=                 # tylko Edge Functions
+# tylko serwer / Edge Functions
+SUPABASE_SERVICE_ROLE_KEY=
+# tylko Edge Functions
+OPENAI_API_KEY=
 REVALIDATE_WEBHOOK_SECRET=
 LLM_ENABLED=false
 ```
