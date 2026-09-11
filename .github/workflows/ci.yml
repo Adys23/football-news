@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nowy push na te sama galez przerywa poprzedni przebieg.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typy, linter, formatowanie
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+  unit:
+    name: Testy jednostkowe i pokrycie
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Progi pokrycia dla kodu wysokiego ryzyka sa w vitest.config.ts.
+      - run: npm run test:coverage
+
+  db:
+    name: Migracje, RLS i typy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # supabase start zaklada baze, wykonuje migracje i seed.
+      - name: Start lokalnego stacku
+        run: supabase start -x studio,imgproxy
+
+      - name: Linter bazy
+        run: supabase db lint --level error
+
+      - name: Testy pgTAP (RLS, trigger publikacji, kolejka zadan)
+        run: supabase test db
+
+      # Typy w repozytorium musza odpowiadac migracjom. Rozjazd to blad,
+      # bo agenci i panel polegaja na tych typach.
+      - name: Zgodnosc wygenerowanych typow ze schematem
+        run: |
+          node scripts/gen-types.mjs
+          git diff --exit-code -- supabase/functions/_shared/contracts/database.types.ts
+
+  build:
+    name: Build produkcyjny
+    runs-on: ubuntu-latest
+    env:
+      # Build nie moze wymagac dostepu do prawdziwej bazy ani kluczy.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-do-buildu
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      LLM_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  security:
+    name: Zaleznosci i sekrety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Audyt zaleznosci
+        run: npm audit --audit-level=high
+      - name: Skan sekretow w plikach wersjonowanych
+        run: node scripts/scan-secrets.mjs

@@ -1,0 +1,26 @@
+# Właściciele obszarów wymagających świadomej zgody.
+#
+# UWAGA: przed użyciem zamień @OWNER na swój login GitHub.
+# Plik z nieistniejącym loginem nie działa, a GitHub nie zgłasza tego jako błędu.
+
+# Wszystko domyślnie
+*                                   @OWNER
+
+# Schemat bazy: migracji nie zmieniamy po fakcie
+/supabase/migrations/               @OWNER
+
+# Polityki dostępu i zasady publikacji
+/supabase/migrations/0014_rls_policies.sql  @OWNER
+
+# Prompty i zasady redakcyjne - zmiana wpływa na każdy przyszły tekst
+/supabase/functions/_shared/prompts/        @OWNER
+
+# Bramki jakości i automatyzacja
+/.github/                           @OWNER
+/.husky/                            @OWNER
+/.cursor/                           @OWNER
+/scripts/                           @OWNER
+
+# Dokumentacja architektury jest źródłem prawdy dla agentów
+/docs/                              @OWNER
+/AGENTS.md                          @OWNER
