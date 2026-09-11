@@ -1,0 +1,19 @@
+{
+  "imports": {
+    "zod": "npm:zod@^4.6.2",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.116.0",
+    "openai": "npm:openai@^7.15.0"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "dom"]
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "lineWidth": 100
+  }
+}
