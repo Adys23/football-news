@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fail, isDockerRunning, isSupabaseRunning, run, step } from "./lib/run.mjs";
 
-const TYPES = "supabase/functions/_shared/contracts/database.types.ts";
-
 /**
  * `supabase db reset` restartuje kontenery, a brama Kong zapamietuje ich stare
  * adresy IP. Drugi i kazdy kolejny reset konczy sie wtedy bledem
@@ -58,12 +56,8 @@ if (run("supabase", ["test", "db"]).code !== 0) {
 }
 
 step("Regeneracja typow i sprawdzenie zgodnosci");
-if (run("node", ["scripts/gen-types.mjs"]).code !== 0) {
-  fail("Generowanie typow nie powiodlo sie.");
-}
-
-if (run("git", ["diff", "--exit-code", "--", TYPES]).code !== 0) {
-  fail(`${TYPES} nie odpowiada migracjom. Zacommituj wygenerowany plik razem z migracja.`);
+if (run("node", ["scripts/check-types.mjs"]).code !== 0) {
+  fail("Typy nie odpowiadaja schematowi.");
 }
 
 console.log("\nBramka bazy danych przeszla.\n");

@@ -45,7 +45,12 @@ const eslintConfig = defineConfig([
   },
   {
     // Skrypty CLI i hooki dzialaja w konsoli, tam console.log jest na miejscu.
-    files: ["scripts/**/*.mjs", ".cursor/hooks/**/*.mjs", "*.config.mjs"],
+    files: [
+      "scripts/**/*.mjs",
+      ".cursor/hooks/**/*.mjs",
+      ".cursor/skills/**/*.mjs",
+      "*.config.mjs",
+    ],
     rules: {
       "no-console": "off",
     },

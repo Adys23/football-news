@@ -39,6 +39,19 @@ Konto redakcyjne z seeda: `redaktor@local.test` / `redaktor123` (tylko lokalnie)
 
 Pipeline AI działa lokalnie bez klucza OpenAI: przy `LLM_ENABLED=false` handlery korzystają z fixtures.
 
+## CLI diagnostyczne
+
+```bash
+npm run jobs:status
+npm run job:enqueue -- FETCH_SOURCE '{"sourceId":"<uuid>"}'
+npm run job:replay -- <id>
+npm run source:test -- <url>
+npm run story:show -- <id>
+npm run llm:cost -- 7
+npm run fixtures:list
+npm run db:studio
+```
+
 ## Bramki jakości
 
 ```bash
