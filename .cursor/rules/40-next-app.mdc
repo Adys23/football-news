@@ -1,0 +1,16 @@
+---
+description: Zasady kodu Next.js - strona publiczna i panel redaktora
+globs: app/**,components/**,lib/**
+alwaysApply: false
+---
+
+# Next.js
+
+- Server Components domyslnie. `"use client"` tylko gdy komponent potrzebuje interaktywnosci.
+- Zakaz wywolan LLM i zakaz przetwarzania zrodel. Ta warstwa czyta z bazy i obsluguje akcje redakcyjne.
+- Zapisy przez server actions, nie przez route handlery. Route handlery zostaja dla webhookow.
+- Klient Supabase: `lib/supabase/server.ts` w kodzie serwerowym, `client.ts` w komponentach klienckich, `admin.ts` wylacznie do akcji redakcyjnych w panelu.
+- Zapytania z jawnymi kolumnami, bez `select("*")`.
+- Teksty widoczne dla uzytkownika po polsku; nazwy zmiennych i plikow po angielsku.
+- Obrazy wylacznie z `image_assets` (wymagana licencja i `alt`), przez `next/image` z podanymi wymiarami.
+- Artykul renderuj przez `components/article/BlockRenderer.tsx` z zamknietego zbioru typow blokow. Nieznany typ ignoruj, nie rzucaj wyjatkiem.

@@ -1,0 +1,15 @@
+---
+description: Zasady pracy z promptami pipeline'u AI
+globs: supabase/functions/_shared/prompts/**
+alwaysApply: false
+---
+
+# Prompty
+
+- Jeden prompt, jedno zadanie. Nie poszerzaj zakresu "na wszelki wypadek".
+- Kazdy prompt ma opisany kontrakt wyjscia i odpowiadajacy mu schemat zod w `_shared/contracts/`.
+- Zmiana promptu wymaga podniesienia wpisu w `versions.ts`. `articles.prompt_version` zapisuje wersje uzyta do wygenerowania tekstu.
+- Model do pisania nie dostaje surowych tresci zrodel - wylacznie zatwierdzone fakty i kontekst z bazy.
+- W prompcie zawsze podawaj `source_type` i `trust_score`. Model musi rozroznic oficjalne potwierdzenie od plotki.
+- Zakazy redakcyjne sa czescia promptu: bez clickbaitu, bez wykrzyknikow, bez przesady, bez kopiowania zdan ze zrodla.
+- Przed zmiana uruchom ewaluacje na fixtures i porownaj wynik przed i po.

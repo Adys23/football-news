@@ -1,0 +1,33 @@
+---
+description: Zasady pisania migracji SQL dla Supabase
+globs: supabase/migrations/**
+alwaysApply: false
+---
+
+# Migracje
+
+- Migracja scalona do `main` jest niezmienialna. Poprawka to nowy plik z `supabase migration new`.
+- Kazda nowa tabela: `alter table X enable row level security;` plus jawne polityki. Tabela bez polityk to blad blokujacy.
+- Klucze glowne: `id uuid primary key default gen_random_uuid()`.
+- Czasy: `timestamptz default now()`. Tabele edytowalne dostaja trigger `set_updated_at`.
+- Typy wyliczeniowe jako `create type ... as enum`, nie `text` z `CHECK`.
+- Indeksy nazywaj `<tabela>_<kolumny>_idx`; indeksy czesciowe tam, gdzie filtrujemy po statusie.
+- Po zmianie schematu: `npm run db:types` i commit `database.types.ts` razem z migracja.
+
+Przyklad naglowka migracji:
+
+```sql
+-- 0016_article_tags.sql
+create table article_tags (
+  article_id uuid not null references articles (id) on delete cascade,
+  tag text not null,
+  primary key (article_id, tag)
+);
+
+alter table article_tags enable row level security;
+
+create policy "article_tags_select_public" on article_tags
+  for select to anon using (
+    exists (select 1 from articles a where a.id = article_id and a.status = 'published')
+  );
+```

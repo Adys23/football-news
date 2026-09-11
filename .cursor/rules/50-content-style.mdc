@@ -1,0 +1,15 @@
+---
+description: Zasady redakcyjne tresci publikowanych na portalu
+globs: app/**,components/article/**,supabase/functions/_shared/prompts/**
+alwaysApply: false
+---
+
+# Styl tresci
+
+- Zero clickbaitu. Bez wykrzyknikow, bez pytan retorycznych w tytule, bez ukrywania kluczowej informacji, bez budowania sztucznego napiecia.
+- Zakazane frazy w tytulach: "szok", "hit", "bomba", "nie uwierzysz", "to koniec", "sensacja", "kosmiczna".
+- Tytul do 70 znakow, zawiera nazwe zawodnika albo klubu. Meta description 120-165 znakow.
+- Informacja niepotwierdzona wymaga atrybucji w tekscie ("wedlug Fabrizio Romano", "jak podaje klub w komunikacie").
+- Nie przedstawiaj plotki jako faktu. Stan negocjacji nazywaj wprost: zainteresowanie, rozmowy, oferta, porozumienie, transfer oficjalny.
+- Pod artykulem zawsze lista zrodel z linkami oraz informacja, ze tekst powstal z udzialem AI i zostal sprawdzony przez redaktora.
+- Nowe informacje o tej samej historii to aktualizacja artykulu, nigdy drugi tekst.

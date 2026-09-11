@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+# Pelna bramka przed wypchnieciem. Tu nie ma wyjatkow - to samo, co robi CI.
+
+echo "--> verify (typecheck, lint, format, testy, build)"
+npm run verify
+
+echo "--> bramka bazy danych"
+npm run verify:db
+
+echo "--> skan sekretow"
+node scripts/scan-secrets.mjs
+
+# Etap 1 roadmapy doda tutaj: npm run test:pipeline

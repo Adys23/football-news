@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -e
+
+# Bramka przed commitem wg docs/engineering-standards.md.
+# Wariant maksymalnie twardy: pelny typecheck, lint i testy na calym repo.
+
+npx --no-install lint-staged
+
+echo "--> typecheck"
+npm run typecheck
+
+echo "--> lint"
+npm run lint
+
+echo "--> testy"
+npm run test
+
+# Bramka bazy: warunkowo, bo wymaga Dockera i trwa minuty.
+# STRICT_PRECOMMIT=1 wymusza ja przy kazdym commicie.
+if [ -n "$STRICT_PRECOMMIT" ] || git diff --cached --name-only | grep -q '^supabase/'; then
+  echo "--> bramka bazy danych"
+  npm run verify:db
+fi

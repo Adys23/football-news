@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "node .cursor/hooks/guard-shell.mjs",
+        "matcher": "git|supabase|npm|rm|psql",
+        "failClosed": true,
+        "timeout": 15
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node .cursor/hooks/after-edit.mjs",
+        "timeout": 60
+      }
+    ],
+    "stop": [
+      {
+        "command": "node .cursor/hooks/check-gates.mjs",
+        "timeout": 300,
+        "loop_limit": 2
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "node .cursor/hooks/scan-prompt.mjs",
+        "timeout": 15
+      }
+    ]
+  }
+}

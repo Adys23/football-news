@@ -1,0 +1,17 @@
+# Koniec linii zawsze LF, niezaleznie od systemu.
+# Bez tego git z autocrlf=true wystawia pliki z CRLF, a wtedy `prettier --check`
+# i porownanie wygenerowanych typow zawodza na swiezym klonie w Windows.
+* text=auto eol=lf
+
+# Pliki generowane - w diffie nie ma ich po co czytac.
+package-lock.json linguist-generated=true
+supabase/functions/_shared/contracts/database.types.ts linguist-generated=true
+
+# Binarne
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

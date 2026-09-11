@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+coverage
+package-lock.json
+public
+supabase/.temp
+supabase/.branches
+next-env.d.ts
+*.sql
+
+# Plik generowany przez `npm run db:types`. Formatowanie go rozjezdza sie
+# z wyjsciem generatora i psuje bramke zgodnosci typow ze schematem.
+supabase/functions/_shared/contracts/database.types.ts

@@ -1,0 +1,16 @@
+---
+description: Zasady kodu Edge Functions i handlerow kolejki
+globs: supabase/functions/**
+alwaysApply: false
+---
+
+# Edge Functions
+
+- To jedyne miejsce, gdzie wolno wywolac LLM i uzyc `SUPABASE_SERVICE_ROLE_KEY` oraz `OPENAI_API_KEY`.
+- Kazde wyjscie modelu waliduj schematem zod z `_shared/contracts/` **przed** zapisem do bazy. Brak walidacji to blad blokujacy.
+- Handler joba jest idempotentny: `upsert` po `story_id` albo `article_id`. Powtorzenie joba nie moze utworzyc drugiego artykulu.
+- Dostep do kolejki wylacznie przez `_shared/lib/jobs.ts`. Nie pisz SQL-a na `jobs` w handlerze.
+- Blad propaguj wyjatkiem - worker wywola `fail_job` z backoffem. Nie lykaj bledow.
+- Logi przez `_shared/lib/log.ts`, nigdy `console.log`.
+- Importy przez bare specifier (`zod`, `@supabase/supabase-js`); mapowanie jest w `supabase/functions/deno.json`. Nie uzywaj `npm:` ani `https://` w kodzie wspoldzielonym, bo ten sam plik kompiluje tsc.
+- Jeden typ joba to jeden plik w `_shared/handlers/`, sygnatura `(job, ctx) => Promise<void>`.

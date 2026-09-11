@@ -1,0 +1,18 @@
+---
+description: Czym jest ten projekt i gdzie szukac zasad
+alwaysApply: true
+---
+
+# Football news - newsroom oparty o AI
+
+Portal z newsami pilkarskimi. Pipeline: zrodla -> fakty -> walidacja -> LLM -> draft -> redaktor -> publikacja. Tresci po polsku, kod po angielsku.
+
+Przed zmiana kodu przeczytaj [AGENTS.md](../../AGENTS.md). Szczegoly w:
+
+- `docs/glossary.md` - `source_item` to nie `story`, `story` to nie `article`
+- `docs/architecture.md` - moduly i warstwy
+- `docs/database.md` - schemat i RLS
+- `docs/ai-pipeline.md` - etapy AI i kontrakty
+- `docs/engineering-standards.md` - bramki jakosci i code review
+
+Trzy zasady, ktorych nie wolno naruszyc bez zmiany dokumentacji: LLM tylko w Edge Functions, artykul tylko z zatwierdzonych faktow, publikacja tylko po akceptacji redaktora.

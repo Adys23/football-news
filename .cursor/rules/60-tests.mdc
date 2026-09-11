@@ -1,0 +1,15 @@
+---
+description: Zasady pisania testow
+globs: tests/**,**/*.test.ts
+alwaysApply: false
+---
+
+# Testy
+
+- Zero wywolan zewnetrznego API. Zrodla i odpowiedzi modelu pochodza z fixtures.
+- Obowiazkowo pokryte: parsowanie RSS, normalizacja tytulu i hash, deduplikacja, progi `trust_score`, backoff w `fail_job`, walidacja blokow artykulu, lista zakazanych fraz w tytule.
+- Progi pokrycia dotycza `_shared/lib/**` i `_shared/contracts/**` (80 procent). Nie pisz testow-atrap, zeby je podbic - zamiast tego usun nieuzywany kod.
+- Import z `vitest` jawny (`import { describe, expect, it } from "vitest"`), bez globali.
+- Aliasy: `@contracts/*` i `@shared/*`.
+- `it.skip` wymaga komentarza z powodem i odnosnikiem do zadania.
+- Nazwa testu opisuje zachowanie, nie implementacje: "odrzuca tytul z wykrzyknikiem", nie "test titleGuard 3".
