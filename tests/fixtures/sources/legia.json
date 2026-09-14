@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "title": "Legia Warszawa wygrala derby",
+      "url": "https://example.test/json/legia-1",
+      "guid": "legia-1",
+      "published": "2025-01-01T18:00:00Z",
+      "summary": "Wynik meczu."
+    }
+  ]
+}

@@ -41,8 +41,8 @@ export default async function HomePage() {
         <div className="mt-10 rounded-md border border-neutral-200 p-6 text-sm text-neutral-600">
           <p className="font-medium text-neutral-900">Brak opublikowanych artykulow.</p>
           <p className="mt-2">
-            Fundament jest gotowy: baza, kolejka zadan i kontrakty. Pobieranie zrodel i pipeline AI
-            powstaja w etapie 1 i 2 (patrz <code>docs/roadmap.md</code>).
+            Fundament, pobieranie RSS i grupowanie w wydarzenia sa gotowe. Pipeline AI powstaje w
+            etapie 2 (patrz <code>docs/roadmap.md</code>).
           </p>
         </div>
       )}

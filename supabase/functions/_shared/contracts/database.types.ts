@@ -1364,8 +1364,49 @@ export type Database = {
         Returns: string
       }
       fail_job: { Args: { p_error: string; p_id: string }; Returns: undefined }
+      find_similar_stories: {
+        Args: {
+          p_since: string
+          p_threshold: number
+          p_title_normalized: string
+        }
+        Returns: {
+          similarity: number
+          story_id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
+      list_due_sources: {
+        Args: never
+        Returns: {
+          active: boolean
+          consecutive_failures: number
+          country: string
+          created_at: string
+          etag: string | null
+          fetch_interval_minutes: number
+          id: string
+          kind: Database["public"]["Enums"]["source_kind"]
+          language: string
+          last_checked_at: string | null
+          last_modified: string | null
+          last_success_at: string | null
+          name: string
+          rss_url: string | null
+          sport: string
+          trust_score: number
+          type: Database["public"]["Enums"]["source_type"]
+          updated_at: string
+          url: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sources"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       normalize_title: { Args: { p_title: string }; Returns: string }
       requeue_dead_jobs: {
         Args: { p_type?: Database["public"]["Enums"]["job_type"] }

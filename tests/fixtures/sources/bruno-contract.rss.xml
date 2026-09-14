@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fixture Football</title>
+    <item>
+      <title>Bruno Fernandes przedluzyl kontrakt z Manchesterem United do 2027</title>
+      <link>https://example.test/news/bruno-1</link>
+      <guid>https://example.test/news/bruno-1</guid>
+      <pubDate>Wed, 01 Jan 2025 12:00:00 GMT</pubDate>
+      <description><![CDATA[Oficjalne potwierdzenie klubu.]]></description>
+    </item>
+    <item>
+      <title>Bruno Fernandes przedluzyl kontrakt z Manchester United do 2027 roku</title>
+      <link>https://example.test/news/bruno-2</link>
+      <guid>https://example.test/news/bruno-2</guid>
+      <pubDate>Wed, 01 Jan 2025 12:05:00 GMT</pubDate>
+      <description>Kolejny serwis o tym samym wydarzeniu.</description>
+    </item>
+    <item>
+      <title>Bruno Fernandes przedluzyl kontrakt z Manchesterem United do 2027 r</title>
+      <link>https://example.test/news/bruno-3</link>
+      <guid>https://example.test/news/bruno-3</guid>
+      <pubDate>Wed, 01 Jan 2025 12:10:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Bruno Fernandes przedluzyl kontrakt z Manchesterem United do roku 2027</title>
+      <link>https://example.test/news/bruno-4</link>
+      <guid>https://example.test/news/bruno-4</guid>
+      <pubDate>Wed, 01 Jan 2025 12:15:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Bruno Fernandes przedluzyl kontrakt z Manchesterem United az do 2027</title>
+      <link>https://example.test/news/bruno-5</link>
+      <guid>https://example.test/news/bruno-5</guid>
+      <pubDate>Wed, 01 Jan 2025 12:20:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -1,3 +1,3 @@
-# Fixture'y odpowiedzi zrodel. CI i testy parsera (etap 1) czytaja stad,
+# Fixture'y odpowiedzi zrodel
 
-# nigdy z internetu.
+CI i testy parsera czytaja stad, nigdy z internetu.

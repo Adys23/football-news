@@ -70,6 +70,11 @@ jobs:
       - name: Zgodnosc wygenerowanych typow ze schematem
         run: node scripts/check-types.mjs
 
+      - name: Smoke ingestion (piec materialow, jedna historia)
+        run: npm run test:pipeline
+        env:
+          LLM_ENABLED: "false"
+
   build:
     name: Build produkcyjny
     runs-on: ubuntu-latest

@@ -49,6 +49,7 @@ npm run source:test -- <url>
 npm run story:show -- <id>
 npm run llm:cost -- 7
 npm run fixtures:list
+npm run test:pipeline
 npm run db:studio
 ```
 
