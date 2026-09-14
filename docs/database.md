@@ -177,10 +177,12 @@ Jedna historia ma wiele źródeł - stąd bierze się wartość dodana portalu.
 | Kolumna          | Typ                                                       |
 | ---------------- | --------------------------------------------------------- |
 | `story_id`       | uuid FK -> `stories`                                      |
-| `source_item_id` | uuid FK -> `source_items`                                 |
+| `source_item_id` | uuid FK -> `source_items`, **`UNIQUE`**                   |
 | `match_method`   | text (`hash`, `trigram`, `entity`, `embedding`, `manual`) |
 | `similarity`     | numeric(4,3)                                              |
 | PK               | `(story_id, source_item_id)`                              |
+
+Jeden materiał należy do jednej historii. Find-or-create wykonuje `link_source_item_to_story` pod `pg_advisory_xact_lock` (migracja `0017`), bo osobne wywołania supabase-js to osobne transakcje.
 
 ### 4.3 `facts`
 
@@ -500,23 +502,25 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 
 ## 10. Kolejność migracji
 
-| Plik                        | Zawartość                                                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_extensions.sql`       | `pg_trgm`, `unaccent`, `vector`, warunkowo `pg_cron` (`pgcrypto` i `pg_net` instaluje sam Supabase)                               |
-| `0002_enums.sql`            | wszystkie typy wyliczeniowe                                                                                                       |
-| `0003_profiles_helpers.sql` | `profiles`, funkcje `is_editor()`, `is_admin()`, `normalize_title()`, trigger `set_updated_at`                                    |
-| `0004_sources.sql`          | `sources` z ograniczeniem zaufania                                                                                                |
-| `0005_source_items.sql`     | `source_items`, indeksy trigram                                                                                                   |
-| `0006_taxonomy.sql`         | `authors`, `categories`                                                                                                           |
-| `0007_stories.sql`          | `stories`, `story_sources`                                                                                                        |
-| `0008_facts.sql`            | `facts`, `story_assessments`                                                                                                      |
-| `0009_media.sql`            | `image_assets`, bucket w Storage                                                                                                  |
-| `0010_entities.sql`         | `leagues`, `clubs`, `players`, `transfers`                                                                                        |
-| `0011_articles.sql`         | `articles`, `article_updates`, `article_scores`, `article_revisions`, `article_entities`, `article_redirects`, trigger publikacji |
-| `0012_jobs.sql`             | `jobs`, funkcje kolejki, `llm_calls`                                                                                              |
-| `0013_settings_audit.sql`   | `settings` z wartościami domyślnymi, `audit_log`, trigger śladu zmian statusu artykułu                                            |
-| `0014_rls_policies.sql`     | polityki dla wszystkich tabel oraz bucketu Storage                                                                                |
-| `0015_cron.sql`             | harmonogramy `pg_cron` wywołujące Edge Functions przez `pg_net`                                                                   |
+| Plik                         | Zawartość                                                                                                                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_extensions.sql`        | `pg_trgm`, `unaccent`, `vector`, warunkowo `pg_cron` (`pgcrypto` i `pg_net` instaluje sam Supabase)                               |
+| `0002_enums.sql`             | wszystkie typy wyliczeniowe                                                                                                       |
+| `0003_profiles_helpers.sql`  | `profiles`, funkcje `is_editor()`, `is_admin()`, `normalize_title()`, trigger `set_updated_at`                                    |
+| `0004_sources.sql`           | `sources` z ograniczeniem zaufania                                                                                                |
+| `0005_source_items.sql`      | `source_items`, indeksy trigram                                                                                                   |
+| `0006_taxonomy.sql`          | `authors`, `categories`                                                                                                           |
+| `0007_stories.sql`           | `stories`, `story_sources`                                                                                                        |
+| `0008_facts.sql`             | `facts`, `story_assessments`                                                                                                      |
+| `0009_media.sql`             | `image_assets`, bucket w Storage                                                                                                  |
+| `0010_entities.sql`          | `leagues`, `clubs`, `players`, `transfers`                                                                                        |
+| `0011_articles.sql`          | `articles`, `article_updates`, `article_scores`, `article_revisions`, `article_entities`, `article_redirects`, trigger publikacji |
+| `0012_jobs.sql`              | `jobs`, funkcje kolejki, `llm_calls`                                                                                              |
+| `0013_settings_audit.sql`    | `settings` z wartościami domyślnymi, `audit_log`, trigger śladu zmian statusu artykułu                                            |
+| `0014_rls_policies.sql`      | polityki dla wszystkich tabel oraz bucketu Storage                                                                                |
+| `0015_cron.sql`              | harmonogramy `pg_cron` wywołujące Edge Functions przez `pg_net`                                                                   |
+| `0016_ingestion_helpers.sql` | `list_due_sources()`, `find_similar_stories()`                                                                                    |
+| `0017_link_source_item.sql`  | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                          |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 

@@ -1364,6 +1364,10 @@ export type Database = {
         Returns: string
       }
       fail_job: { Args: { p_error: string; p_id: string }; Returns: undefined }
+      find_entity_story: {
+        Args: { p_since: string; p_title: string }
+        Returns: string
+      }
       find_similar_stories: {
         Args: {
           p_since: string
@@ -1377,6 +1381,20 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
+      link_source_item_to_story: {
+        Args: {
+          p_category_id: string
+          p_event_type: string
+          p_importance: number
+          p_source_item_id: string
+        }
+        Returns: {
+          out_created: boolean
+          out_match_method: string
+          out_similarity: number
+          out_story_id: string
+        }[]
+      }
       list_due_sources: {
         Args: never
         Returns: {
@@ -1413,6 +1431,10 @@ export type Database = {
         Returns: number
       }
       requeue_stale_jobs: { Args: { p_older_than?: string }; Returns: number }
+      title_contains_label: {
+        Args: { p_label: string; p_title: string }
+        Returns: boolean
+      }
     }
     Enums: {
       article_status:
