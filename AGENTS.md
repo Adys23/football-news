@@ -40,6 +40,8 @@ npm test                   # vitest
 npm run verify             # typecheck + lint + format + test + build
 npm run verify:db          # db reset + db lint + zgodność database.types.ts
 npm run test:pipeline      # smoke FETCH_SOURCE + PROCESS_STORY na fixtures
+npm run deno:check         # typy Edge Functions w runtime Deno
+npm run deno:lint          # deno lint w supabase/functions
 npm run verify:all         # to samo, co robi CI
 
 supabase start             # lokalny stack (Docker)

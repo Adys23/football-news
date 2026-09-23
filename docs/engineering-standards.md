@@ -128,25 +128,28 @@ Jedno odstępstwo od "zawsze wszystko", świadome i warte odnotowania: `verify:d
 
 ```
 1. npm run verify         -> typecheck + lint + test + build
-2. npm run verify:db      -> bezwarunkowo: db reset + db lint + zgodnosc typow
-3. npm run test:pipeline  -> smoke pipeline'u na fixtures (LLM_ENABLED=false)
-4. skan sekretow na zakresie pushowanych commitow
+2. npm run deno:check && npm run deno:lint -> kod Edge Functions w runtime Deno
+3. npm run verify:db      -> bezwarunkowo: db reset + db lint + zgodnosc typow
+4. npm run test:pipeline  -> smoke pipeline'u na fixtures (LLM_ENABLED=false)
+5. skan sekretow na zakresie pushowanych commitow
 ```
 
 ### 3.4 Skrypty w `package.json`
 
-| Skrypt          | Zawartość                                                                           |
-| --------------- | ----------------------------------------------------------------------------------- |
-| `typecheck`     | `tsc --noEmit`                                                                      |
-| `lint`          | `eslint . --max-warnings=0`                                                         |
-| `format:check`  | `prettier --check .`                                                                |
-| `test`          | `vitest run`                                                                        |
-| `test:db`       | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                  |
-| `test:pipeline` | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1) |
-| `env:local`     | generuje `.env.local` z danych działającego lokalnego stacku                        |
-| `verify`        | `typecheck && lint && format:check && test && build`                                |
-| `verify:db`     | `supabase db reset && db lint && test db && gen types && git diff --exit-code`      |
-| `verify:all`    | `verify && verify:db && test:pipeline` - to samo, co robi CI na tym etapie          |
+| Skrypt          | Zawartość                                                                             |
+| --------------- | ------------------------------------------------------------------------------------- |
+| `typecheck`     | `tsc --noEmit`                                                                        |
+| `lint`          | `eslint . --max-warnings=0`                                                           |
+| `format:check`  | `prettier --check .`                                                                  |
+| `test`          | `vitest run`                                                                          |
+| `test:db`       | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                    |
+| `test:pipeline` | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)   |
+| `deno:check`    | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime |
+| `deno:lint`     | `deno lint` w `supabase/functions/`                                                   |
+| `env:local`     | generuje `.env.local` z danych działającego lokalnego stacku                          |
+| `verify`        | `typecheck && lint && format:check && test && build`                                  |
+| `verify:db`     | `supabase db reset && db lint && test db && gen types && git diff --exit-code`        |
+| `verify:all`    | `verify && deno:check && deno:lint && verify:db && test:pipeline` - to samo, co CI    |
 
 Zasada: **to, co robi CI, musi dać się uruchomić jedną komendą lokalnie** (`npm run verify:all`). Bez tego agent nie ma jak sprawdzić pracy przed pushem.
 

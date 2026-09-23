@@ -35,9 +35,11 @@
     "fixtures:list": "node scripts/fixtures-list.mjs",
     "ui:add": "shadcn add",
     "test:pipeline": "node scripts/test-pipeline.mjs",
+    "deno:check": "cd supabase/functions && deno check --frozen fetch-sources/index.ts process-jobs/index.ts _shared/",
+    "deno:lint": "cd supabase/functions && deno lint",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
     "verify:db": "node scripts/verify-db.mjs",
-    "verify:all": "npm run verify && npm run verify:db && npm run test:pipeline",
+    "verify:all": "npm run verify && npm run deno:check && npm run deno:lint && npm run verify:db && npm run test:pipeline",
     "prepare": "husky"
   },
   "dependencies": {

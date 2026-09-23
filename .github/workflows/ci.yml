@@ -28,6 +28,25 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+  # tsc sprawdza wspoldzielony kod z perspektywy Node. Ten job sprawdza go tak,
+  # jak widzi go Edge Runtime: import map z deno.json, specyfikatory node:, lockfile.
+  deno:
+    name: Edge Functions (Deno)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          # Zgodnie z [edge_runtime] deno_version w supabase/config.toml.
+          deno-version: v2.x
+      - name: Typy w runtime Deno
+        run: deno check --frozen fetch-sources/index.ts process-jobs/index.ts _shared/
+      - name: Linter Deno
+        run: deno lint
+
   unit:
     name: Testy jednostkowe i pokrycie
     runs-on: ubuntu-latest
