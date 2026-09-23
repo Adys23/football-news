@@ -63,6 +63,21 @@ export async function enqueueJob<T extends JobType>(
   return data;
 }
 
+/** Czy kiedykolwiek zakolejkowano zadanie o tym kluczu (poza anulowanymi). */
+export async function jobExists(client: ServiceClient, dedupeKey: string): Promise<boolean> {
+  const { count, error } = await client
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("dedupe_key", dedupeKey)
+    .neq("status", "cancelled");
+
+  if (error) {
+    throw new JobError(`Odczyt jobs(${dedupeKey}): ${error.message}`);
+  }
+
+  return (count ?? 0) > 0;
+}
+
 /** Atomowe pobranie partii zadan. Puste typy = wszystkie typy. */
 export async function claimJobs(
   client: ServiceClient,

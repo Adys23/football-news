@@ -117,9 +117,38 @@ if ((links ?? []).length !== 5) {
   fail(`Oczekiwano 5 zrodel przy historii, jest ${links?.length ?? 0}.`);
 }
 
+console.log("test:pipeline OK: 5 materialow -> 1 historia.");
+
+// Etap 2: ekstrakcja faktow na fixtures (LLM_ENABLED=false). Piec jobow EXTRACT_FACTS
+// dla tej samej historii ma dac jedno wywolanie modelu - reszte odcina cache.
+const [facts, calls, validateJobs] = await Promise.all([
+  client.from("facts").select("id, source_item_id").eq("story_id", storyId),
+  client.from("llm_calls").select("model, ok").eq("story_id", storyId).eq("stage", "extract"),
+  client.from("jobs").select("status").eq("story_id", storyId).eq("type", "VALIDATE_FACTS"),
+]);
+
+for (const result of [facts, calls, validateJobs]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+if ((facts.data ?? []).length === 0) {
+  fail("Ekstrakcja nie zapisala faktow.");
+}
+
+if ((calls.data ?? []).length !== 1 || calls.data?.[0]?.model !== "fixture") {
+  fail(`Oczekiwano jednego wywolania extract na fixture, jest ${calls.data?.length ?? 0}.`);
+}
+
+if ((validateJobs.data ?? []).length !== 1) {
+  fail(`Oczekiwano jednego joba VALIDATE_FACTS, jest ${validateJobs.data?.length ?? 0}.`);
+}
+
+await client.from("stories").delete().eq("id", storyId);
 await client.from("sources").delete().in("id", sourceIds);
 
-console.log("test:pipeline OK: 5 materialow -> 1 historia.");
+console.log(`test:pipeline OK: 5 zrodel -> 1 ekstrakcja, ${facts.data?.length} faktow.`);
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

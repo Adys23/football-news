@@ -27,13 +27,17 @@ const sourcePayload = z.object({ sourceId: z.uuid() });
 const sourceItemPayload = z.object({ sourceItemId: z.uuid() });
 const storyPayload = z.object({ storyId: z.uuid() });
 const articlePayload = z.object({ articleId: z.uuid() });
+/** `unclear` z ekstrakcji: czego zrodla nie podaja. Trafia do story_assessments.reasoning. */
+const validateFactsPayload = storyPayload.extend({
+  unclear: z.array(z.string()).default([]),
+});
 
 /** Payload per typ joba. Klucze odpowiadaja wartosciom enuma job_type w bazie. */
 export const jobPayloadSchemas = {
   FETCH_SOURCE: sourcePayload,
   PROCESS_STORY: sourceItemPayload,
   EXTRACT_FACTS: storyPayload,
-  VALIDATE_FACTS: storyPayload,
+  VALIDATE_FACTS: validateFactsPayload,
   GENERATE_ARTICLE: storyPayload,
   GENERATE_TITLE: storyPayload,
   GENERATE_SEO: articlePayload,

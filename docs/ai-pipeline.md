@@ -155,6 +155,14 @@ Wyjście (structured output, walidowane zod):
 
 Reguły zapisu: fakty z `confidence < 0.60` są odrzucane na wejściu do bazy. Pole `unclear` jest zapisywane w `story_assessments.reasoning` i widoczne dla redaktora - brak informacji jest też informacją.
 
+Implementacja (`_shared/handlers/extract-facts.ts`, logika w `_shared/lib/facts.ts`):
+
+- jeden wiersz `facts` na parę (fakt, źródło), zgodnie z unikalnym indeksem; indeksy źródeł spoza wejścia są odrzucane,
+- każde uruchomienie liczy fakty dla pełnego zestawu materiałów i zastępuje poprzednie; `unclear` jedzie do `VALIDATE_FACTS` w payloadzie,
+- `PROCESS_STORY` kolejkuje `EXTRACT_FACTS` z kluczem `EXTRACT_FACTS:<story>:<source_item>`, bo unikalny `dedupe_key` obejmuje też joby `running` - klucz per historia gubiłby źródło dołączone w trakcie ekstrakcji,
+- cache ekstrakcji: `VALIDATE_FACTS` dostaje klucz `VALIDATE_FACTS:<story>:<hash zestawu materiałów>`; istniejący job z tym kluczem oznacza, że ten zestaw był już policzony, i ekstrakcja kończy się bez wywołania modelu,
+- historia z artykułem nie jest ekstrahowana ponownie - aktualizacja tekstu to `UPDATE_ARTICLE` (V2).
+
 ---
 
 ## 4. Etap 4: ocena informacji
