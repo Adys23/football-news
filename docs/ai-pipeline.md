@@ -295,6 +295,8 @@ Maksymalnie 70 znakow. Tytul musi zawierac nazwe zawodnika lub klubu.
 
 Walidacja deterministyczna po stronie kodu, przed zapisem: długość, brak `!`, brak `?` na końcu, brak wyrazów z listy zakazanej (`szok`, `hit`, `bomba`, `nie uwierzysz`, `to koniec`), obecność rozpoznanej encji.
 
+SEO (`07-generate-seo.md`) to osobne wywołanie po wyborze tytułu: z tytułu i leadu powstają `seo_title` (do 70 znaków), `seo_description` (120 - 165 znaków) i `slug`. Numer pliku jest dalszy niż QA, bo prompt doszedł po ustaleniu numeracji; kolejność jobów wyznacza tabela z sekcji 1, nie numer pliku.
+
 ---
 
 ## 7. Etap 8: automatyczna kontrola jakości
@@ -396,6 +398,8 @@ To jednocześnie:
 - deterministyczne części (dedup, hashe, walidacja tytułu, backoff) są pokryte testami jednostkowymi w `vitest`.
 
 Prompty są plikami `.md`; każdy zapis artykułu zapamiętuje `prompt_version` (hash treści promptu) i `model_used`. Po zmianie promptu można porównać jakość wersji na tych samych historiach.
+
+Rejestr `PROMPT_VERSIONS` w `_shared/prompts/versions.ts` trzyma numer wersji i hash każdego promptu. Test `tests/llm/prompts.test.ts` porównuje hash z treścią pliku i sprawdza, że każda fixture spełnia schemat zod swojego etapu - zmiana promptu bez podbicia wersji albo fixture niezgodna z kontraktem nie przejdzie CI. Fixtures w `_shared/llm/fixtures/` opisują jedną historię (przedłużenie kontraktu Bruno Fernandesa); UUID faktów wstawia handler przez placeholdery `{{fact_1}}`, `{{fact_2}}` itd., w kolejności zapisu faktów.
 
 ---
 

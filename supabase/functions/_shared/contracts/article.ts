@@ -70,7 +70,7 @@ export const titleSelectionOutputSchema = z.object({
   rejected_reasons: z.record(z.string(), z.string()).default({}),
 });
 
-/** Wyjscie etapu GENERATE_SEO. */
+/** Wyjscie etapu GENERATE_SEO (prompt 07-generate-seo.md). */
 export const seoOutputSchema = z.object({
   seo_title: z.string().min(1).max(70),
   seo_description: z.string().min(120).max(165),

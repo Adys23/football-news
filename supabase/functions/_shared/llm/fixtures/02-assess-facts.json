@@ -1,0 +1,8 @@
+{
+  "publishability": "review",
+  "confidence": 0.92,
+  "conflicts": [],
+  "approved_facts": ["{{fact_1}}", "{{fact_2}}", "{{fact_3}}"],
+  "rejected_facts": [],
+  "reasoning": "Przedłużenie kontraktu potwierdził klub w oficjalnym komunikacie, a pozostałe źródła podają ten sam rok końca umowy. Warunki finansowe nie są znane."
+}
