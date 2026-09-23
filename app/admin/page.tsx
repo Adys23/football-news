@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +49,16 @@ export default async function AdminPage() {
         <div className="rounded-md border border-neutral-200 p-4">
           <dt className="text-xs tracking-wide text-neutral-500 uppercase">Status etapu</dt>
           <dd className="mt-1 text-sm text-neutral-700">
-            Fundament. Kolejka zadan i schemat bazy gotowe, pipeline AI w etapie 2.
+            Ingestion. Pipeline AI (fakty i draft) w etapie 2.
           </dd>
         </div>
       </dl>
+
+      <p className="mt-8 text-sm">
+        <Link href="/admin/historie" className="underline">
+          Wykryte wydarzenia
+        </Link>
+      </p>
     </main>
   );
 }

@@ -146,7 +146,7 @@ Jedno odstępstwo od "zawsze wszystko", świadome i warte odnotowania: `verify:d
 | `env:local`     | generuje `.env.local` z danych działającego lokalnego stacku                        |
 | `verify`        | `typecheck && lint && format:check && test && build`                                |
 | `verify:db`     | `supabase db reset && db lint && test db && gen types && git diff --exit-code`      |
-| `verify:all`    | `verify && verify:db` - to samo, co robi CI na tym etapie                           |
+| `verify:all`    | `verify && verify:db && test:pipeline` - to samo, co robi CI na tym etapie          |
 
 Zasada: **to, co robi CI, musi dać się uruchomić jedną komendą lokalnie** (`npm run verify:all`). Bez tego agent nie ma jak sprawdzić pracy przed pushem.
 

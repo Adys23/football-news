@@ -12,4 +12,5 @@ npm run verify:db
 echo "--> skan sekretow"
 node scripts/scan-secrets.mjs
 
-# Etap 1 roadmapy doda tutaj: npm run test:pipeline
+echo "--> smoke ingestion (FETCH_SOURCE + PROCESS_STORY)"
+npm run test:pipeline

@@ -68,9 +68,12 @@ jobs:
       # Typy w repozytorium musza odpowiadac migracjom. Rozjazd to blad,
       # bo agenci i panel polegaja na tych typach.
       - name: Zgodnosc wygenerowanych typow ze schematem
-        run: |
-          node scripts/gen-types.mjs
-          git diff --exit-code -- supabase/functions/_shared/contracts/database.types.ts
+        run: node scripts/check-types.mjs
+
+      - name: Smoke ingestion (piec materialow, jedna historia)
+        run: npm run test:pipeline
+        env:
+          LLM_ENABLED: "false"
 
   build:
     name: Build produkcyjny

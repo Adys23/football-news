@@ -113,7 +113,9 @@ MVP - trzy warstwy, w tej kolejności:
 2. Podobieństwo tytułu przez `pg_trgm` (`similarity > 0.55`) w oknie 48 godzin.
 3. Zgodność encji - co najmniej jeden wspólny zawodnik lub klub rozpoznany słownikiem z `players` i `clubs`.
 
-Jeśli trafienie: nowy `source_item` dołącza do istniejącej `story` przez `story_sources`, a historia dostaje `last_updated_at = now()` i nowy job `EXTRACT_FACTS`. Jeśli brak trafienia: powstaje nowa `story` ze statusem `new`.
+Jeśli trafienie: nowy `source_item` dołącza do istniejącej `story` przez `story_sources`, a historia dostaje `last_updated_at = now()`. Jeśli brak trafienia: powstaje nowa `story` ze statusem `new`.
+
+Find-or-create jest funkcją SQL `link_source_item_to_story`: `pg_advisory_xact_lock`, ponowne szukanie trigramem i encjami, potem insert. Klient supabase-js nie trzyma transakcji między requestami, więc lock w osobnym RPC nic nie daje - dwa równoległe `PROCESS_STORY` mogłyby wtedy utworzyć dwie historie o tym samym wydarzeniu. `EXTRACT_FACTS` wchodzi w etapie 2.
 
 V2 zastępuje warstwę 2 embeddingami w `pgvector` (podejście hybrydowe: wektor plus keyword).
 
@@ -237,7 +239,7 @@ sequenceDiagram
   Fetch->>DB: enqueue PROCESS_STORY
   Cron->>Worker: co 1 min
   Worker->>DB: claim_jobs(FOR UPDATE SKIP LOCKED)
-  Worker->>DB: dedup -> story + story_sources
+  Worker->>DB: link_source_item_to_story (lock + find-or-create)
   Worker->>LLM: EXTRACT_FACTS
   Worker->>DB: insert facts
   Worker->>LLM: VALIDATE_FACTS
