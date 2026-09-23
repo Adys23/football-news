@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyAssessmentRules,
   canGenerateArticle,
   factAssessmentOutputSchema,
   requiresEscalation,
+  type AssessedFact,
   type FactAssessmentOutput,
 } from "@contracts/assessment.ts";
 
@@ -83,5 +85,77 @@ describe("requiresEscalation", () => {
     };
 
     expect(requiresEscalation(withConflict, 0.8)).toBe(false);
+  });
+});
+
+describe("applyAssessmentRules", () => {
+  const OTHER_ID = "22222222-2222-4222-8222-222222222222";
+  const official: AssessedFact = {
+    id: FACT_ID,
+    confidence: 0.95,
+    sources: [
+      { sourceId: "club", trustScore: 1 },
+      { sourceId: "outlet", trustScore: 0.85 },
+    ],
+  };
+
+  it("usuwa z zatwierdzonych identyfikatory spoza historii", () => {
+    const { assessment, unknownFactIds } = applyAssessmentRules(
+      { ...base, approved_facts: [FACT_ID, OTHER_ID] },
+      [official],
+    );
+
+    expect(assessment.approved_facts).toEqual([FACT_ID]);
+    expect(unknownFactIds).toEqual([OTHER_ID]);
+  });
+
+  it("odrzuca, gdy zaden zatwierdzony fakt nie ma pewnosci >= 0.8", () => {
+    const { assessment } = applyAssessmentRules(base, [{ ...official, confidence: 0.79 }]);
+
+    expect(assessment.publishability).toBe("reject");
+  });
+
+  it("odrzuca, gdy zadne zrodlo zatwierdzonych faktow nie ma zaufania >= 0.8", () => {
+    const { assessment } = applyAssessmentRules(base, [
+      { ...official, sources: [{ sourceId: "agg", trustScore: 0.5 }] },
+    ]);
+
+    expect(assessment.publishability).toBe("reject");
+  });
+
+  it("odrzuca, gdy model zatwierdzil wylacznie nieznane fakty", () => {
+    const { assessment } = applyAssessmentRules({ ...base, approved_facts: [OTHER_ID] }, [
+      official,
+    ]);
+
+    expect(assessment).toMatchObject({ publishability: "reject", approved_facts: [] });
+  });
+
+  it("zostawia auto tylko przy wysokiej pewnosci, bez konfliktow i z dwoma zrodlami", () => {
+    const auto = { ...base, publishability: "auto" as const, confidence: 0.93 };
+
+    expect(applyAssessmentRules(auto, [official]).assessment.publishability).toBe("auto");
+    expect(
+      applyAssessmentRules({ ...auto, confidence: 0.89 }, [official]).assessment.publishability,
+    ).toBe("review");
+    expect(
+      applyAssessmentRules(
+        {
+          ...auto,
+          conflicts: [{ description: "Rozne kwoty.", source_indexes: [1, 2], severity: "low" }],
+        },
+        [official],
+      ).assessment.publishability,
+    ).toBe("review");
+    expect(
+      applyAssessmentRules(auto, [{ ...official, sources: [{ sourceId: "club", trustScore: 1 }] }])
+        .assessment.publishability,
+    ).toBe("review");
+  });
+
+  it("nie podnosi reject modelu, nawet gdy progi sa spelnione", () => {
+    const { assessment } = applyAssessmentRules({ ...base, publishability: "reject" }, [official]);
+
+    expect(assessment.publishability).toBe("reject");
   });
 });

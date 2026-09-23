@@ -213,6 +213,14 @@ Progi decyzyjne (konfigurowalne w `settings`):
 
 Tylko fakty z `approved_facts` trafiają do etapu pisania. Reszta jest w bazie, ale nie w tekście.
 
+Implementacja (`_shared/handlers/validate-facts.ts`):
+
+- wiersze `facts` tego samego faktu z różnych źródeł są łączone (`groupFacts`); identyfikatorem faktu dla modelu jest wiersz z najbardziej wiarygodnego źródła,
+- progi z tabeli wyżej nakłada kod (`applyAssessmentRules` w `contracts/assessment.ts`) na wynik modelu: identyfikatory spoza historii są usuwane, `reject` modelu zostaje `reject`, a `auto` bez spełnionych warunków spada do `review`. Progi są stałymi w kodzie; przeniesienie do `settings` wymaga migracji,
+- historia bez faktów dostaje `reject` bez wywołania modelu,
+- walidacja zestawu materiałów, który przestał być aktualny (doszło źródło po ekstrakcji), kończy się bez zmian - nowa ekstrakcja zakolejkuje własną walidację,
+- `unclear` z ekstrakcji jest dopisywane do `reasoning`; po akceptacji historia przechodzi do `drafting`, a kolejka dostaje `GENERATE_ARTICLE`.
+
 ---
 
 ## 5. Etap 5: napisanie artykułu
