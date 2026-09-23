@@ -16,5 +16,5 @@ npm run verify:db
 echo "--> skan sekretow"
 node scripts/scan-secrets.mjs
 
-echo "--> smoke ingestion (FETCH_SOURCE + PROCESS_STORY)"
+echo "--> smoke pipeline (RSS -> artykul w review, fixtures LLM)"
 npm run test:pipeline
