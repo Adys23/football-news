@@ -3,6 +3,8 @@ import type { JobHandler } from "../lib/handler-context.ts";
 import { handleExtractFacts } from "./extract-facts.ts";
 import { handleFetchSource } from "./fetch-source.ts";
 import { handleGenerateArticle } from "./generate-article.ts";
+import { handleGenerateSeo } from "./generate-seo.ts";
+import { handleGenerateTitle } from "./generate-title.ts";
 import { handleProcessStory } from "./process-story.ts";
 import { handleValidateFacts } from "./validate-facts.ts";
 
@@ -12,6 +14,8 @@ export const jobHandlers: Partial<Record<JobType, JobHandler>> = {
   EXTRACT_FACTS: handleExtractFacts,
   VALIDATE_FACTS: handleValidateFacts,
   GENERATE_ARTICLE: handleGenerateArticle,
+  GENERATE_TITLE: handleGenerateTitle,
+  GENERATE_SEO: handleGenerateSeo,
 };
 
 /**
