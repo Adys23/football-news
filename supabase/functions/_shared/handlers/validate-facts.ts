@@ -6,13 +6,14 @@ import type { FactGroup } from "../lib/facts.ts";
 import {
   buildExtractionInput,
   groupFacts,
+  itemSetDedupeKey,
   itemSetKey,
   shouldEscalateValidation,
-  validateFactsDedupeKey,
 } from "../lib/facts.ts";
 import { enqueueJob, JobError } from "../lib/jobs.ts";
 import { logInfo } from "../lib/log.ts";
 import { readPipelineSettings } from "../lib/settings.ts";
+import { loadFactRows } from "../lib/story-facts.ts";
 import { loadStorySources, setStoryStatus } from "../lib/story-sources.ts";
 import { callLlm } from "../llm/call.ts";
 import { loadPrompt } from "../llm/prompts.ts";
@@ -28,7 +29,7 @@ export const handleValidateFacts: JobHandler = async (job, ctx) => {
   const sources = await loadStorySources(ctx, storyId);
   const setKey = await itemSetKey(sources.map((source) => source.sourceItemId));
   // Job bez klucza (np. z CLI) to swiadome wymuszenie walidacji biezacych faktow.
-  if (job.dedupe_key && job.dedupe_key !== validateFactsDedupeKey(storyId, setKey)) {
+  if (job.dedupe_key && job.dedupe_key !== itemSetDedupeKey("VALIDATE_FACTS", storyId, setKey)) {
     // Od ekstrakcji doszly materialy: nowa ekstrakcja zastapi fakty i zakolejkuje wlasna walidacje.
     logInfo("validate.stale_item_set", { storyId, jobKey: job.dedupe_key, setKey });
     return;
@@ -43,7 +44,7 @@ export const handleValidateFacts: JobHandler = async (job, ctx) => {
     }
   }
   const trustBySource = new Map(sources.map((source) => [source.sourceId, source.trustScore]));
-  const groups = groupFacts(await loadFacts(ctx, storyId), trustBySource);
+  const groups = groupFacts(await loadFactRows(ctx, storyId), trustBySource);
 
   if (groups.length === 0) {
     await saveAssessment(
@@ -117,7 +118,7 @@ export const handleValidateFacts: JobHandler = async (job, ctx) => {
   await enqueueJob(ctx.client, {
     type: "GENERATE_ARTICLE",
     payload: { storyId },
-    dedupeKey: `GENERATE_ARTICLE:${storyId}:${setKey}`,
+    dedupeKey: itemSetDedupeKey("GENERATE_ARTICLE", storyId, setKey),
     storyId,
   });
 
@@ -134,20 +135,6 @@ function sourceIndexes(group: FactGroup, indexBySource: Map<string, number>): nu
 
 function withUnclear(reasoning: string, unclear: string[]): string {
   return unclear.length === 0 ? reasoning : `${reasoning}\n\nBrak w zrodlach: ${unclear.join(" ")}`;
-}
-
-async function loadFacts(ctx: HandlerContext, storyId: string) {
-  const { data, error } = await ctx.client
-    .from("facts")
-    .select("id, subject, predicate, object, statement_pl, confidence, source_id")
-    .eq("story_id", storyId)
-    .is("superseded_by", null);
-
-  if (error) {
-    throw new JobError(`Odczyt faktow historii ${storyId}: ${error.message}`);
-  }
-
-  return (data ?? []).map((row) => ({ ...row, confidence: Number(row.confidence) }));
 }
 
 async function saveAssessment(

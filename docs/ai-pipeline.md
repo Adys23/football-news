@@ -266,6 +266,14 @@ Wyjście:
 
 `used_fact_ids` jest obowiązkowe - pozwala etapowi kontroli sprawdzić maszynowo, czy tekst nie wyszedł poza zatwierdzony zbiór faktów.
 
+Implementacja (`_shared/handlers/generate-article.ts`):
+
+- przed zapisem kod sprawdza `draftIssues` (`contracts/article.ts`): `used_fact_ids` i `fact_box` tylko z zatwierdzonych faktów, 4 - 7 akapitów, 250 - 450 słów w akapitach; naruszenie to błąd joba i ponowienie z backoffem,
+- artykuł jest zapisywany jako `draft` (upsert po `story_id`) z tymczasowym tytułem z historii i slugiem `draft-<story>`; każda wersja modelu trafia do `article_revisions` z `edited_by = null`,
+- artykuł, który wyszedł z `draft` (redaktor, publikacja), nie jest nadpisywany,
+- job nieaktualny (zmienił się zestaw materiałów albo zatwierdzone fakty zniknęły po ponownej ekstrakcji) kończy się bez zapisu; klucze jobów od walidacji w dół mają postać `<TYP>:<story>:<hash zestawu materiałów>`,
+- kontekst to zawodnicy i kluby rozpoznani w tytule historii i faktach (`lib/article-context.ts`), razem z klubem zawodnika i ligą klubu.
+
 ---
 
 ## 6. Etap 6: tytuł jako osobne zadanie

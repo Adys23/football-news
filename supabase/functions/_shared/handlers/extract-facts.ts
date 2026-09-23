@@ -8,9 +8,9 @@ import { loadStorySources, setStoryStatus } from "../lib/story-sources.ts";
 import {
   buildExtractionInput,
   factRowsFromExtraction,
+  itemSetDedupeKey,
   itemSetKey,
   shouldEscalateExtraction,
-  validateFactsDedupeKey,
 } from "../lib/facts.ts";
 import { callLlm } from "../llm/call.ts";
 import { loadPrompt } from "../llm/prompts.ts";
@@ -36,7 +36,7 @@ export const handleExtractFacts: JobHandler = async (job, ctx) => {
   }
 
   const setKey = await itemSetKey(sources.map((source) => source.sourceItemId));
-  const validateKey = validateFactsDedupeKey(storyId, setKey);
+  const validateKey = itemSetDedupeKey("VALIDATE_FACTS", storyId, setKey);
   if (await jobExists(ctx.client, validateKey)) {
     logInfo("facts.cache_hit", { storyId, setKey });
     return;

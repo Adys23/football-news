@@ -4,8 +4,10 @@ import {
   articleContentSchema,
   articleDraftOutputSchema,
   decideAfterQa,
+  draftIssues,
   hasOnlyApprovedFacts,
   isFastTrack,
+  measureDraft,
   qaScoresOutputSchema,
   seoOutputSchema,
   titleCandidatesOutputSchema,
@@ -183,5 +185,54 @@ describe("hasOnlyApprovedFacts", () => {
     expect(hasOnlyApprovedFacts(draft, [FACT_A, FACT_B])).toBe(true);
     expect(hasOnlyApprovedFacts(draft, [FACT_B])).toBe(false);
     expect(hasOnlyApprovedFacts(draft, [])).toBe(false);
+  });
+});
+
+describe("draftIssues", () => {
+  const paragraph = (words: number) => ({
+    type: "paragraph" as const,
+    text: Array.from({ length: words }, (_, i) => `slowo${i}`).join(" "),
+  });
+  const valid: ArticleDraftOutput = {
+    lead: "Lead.",
+    blocks: [
+      paragraph(70),
+      { type: "heading", level: 2, text: "Naglowek nie liczy sie do dlugosci" },
+      paragraph(70),
+      paragraph(70),
+      paragraph(70),
+      { type: "fact_box", factIds: [FACT_A] },
+    ],
+    used_fact_ids: [FACT_A],
+    excerpt: "Skrot.",
+  };
+
+  it("przepuszcza draft w granicach dlugosci i z zatwierdzonymi faktami", () => {
+    expect(measureDraft(valid.blocks)).toEqual({ paragraphs: 4, words: 280 });
+    expect(draftIssues(valid, [FACT_A])).toEqual([]);
+  });
+
+  it("zglasza fakty spoza zatwierdzonych, takze w fact_box", () => {
+    const issues = draftIssues(
+      { ...valid, blocks: [...valid.blocks, { type: "fact_box", factIds: [FACT_B] }] },
+      [FACT_A],
+    );
+
+    expect(issues).toEqual(["fact_box wskazuje fakt spoza zatwierdzonych."]);
+    expect(draftIssues(valid, [FACT_B])).toHaveLength(2);
+  });
+
+  it("zglasza zbyt krotki i zbyt dlugi tekst oraz liczbe akapitow", () => {
+    const short = { ...valid, blocks: [paragraph(50), paragraph(50), paragraph(50)] };
+    const long = { ...valid, blocks: Array.from({ length: 8 }, () => paragraph(60)) };
+
+    expect(draftIssues(short, [FACT_A])).toEqual([
+      "Akapitow: 3, dozwolone 4-7.",
+      "Slow: 150, dozwolone 250-450.",
+    ]);
+    expect(draftIssues(long, [FACT_A])).toEqual([
+      "Akapitow: 8, dozwolone 4-7.",
+      "Slow: 480, dozwolone 250-450.",
+    ]);
   });
 });

@@ -177,7 +177,7 @@ describe("groupFacts", () => {
     );
 
     expect(rest).toEqual([]);
-    expect(group).toMatchObject({ id: "a", confidence: 0.97 });
+    expect(group).toMatchObject({ id: "a", confidence: 0.97, rowIds: ["b", "a"] });
     expect(group?.sources).toEqual([
       { sourceId: "outlet", trustScore: 0.85 },
       { sourceId: "club", trustScore: 1 },
@@ -206,6 +206,7 @@ describe("shouldEscalateValidation", () => {
     statement_pl: "Arsenal zaplaci 12 mln EUR.",
     confidence: 0.9,
     sources: [],
+    rowIds: ["a"],
   };
 
   it("eskaluje przy niskiej pewnosci i przy sprzecznych dopelnieniach", () => {

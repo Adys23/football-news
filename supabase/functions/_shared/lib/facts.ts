@@ -4,6 +4,7 @@ import type {
   FactExtractionOutput,
   FactExtractionSource,
 } from "../contracts/facts.ts";
+import type { JobType } from "../contracts/jobs.ts";
 import { sha256Hex } from "./hash.ts";
 
 /**
@@ -135,6 +136,8 @@ export type FactGroup = {
   statement_pl: string;
   confidence: number;
   sources: { sourceId: string; trustScore: number }[];
+  /** Wszystkie wiersze faktu - zatwierdzony id pozostaje rozpoznawalny po zmianie zaufania zrodla. */
+  rowIds: string[];
 };
 
 /**
@@ -173,6 +176,7 @@ export function groupFacts(rows: FactRow[], trustBySource: Map<string, number>):
         statement_pl: best.statement_pl,
         confidence: Math.max(...members.map((row) => row.confidence)),
         sources: [...sources].map(([sourceId, trustScore]) => ({ sourceId, trustScore })),
+        rowIds: members.map((row) => row.id),
       };
     })
     .sort((a, b) => b.confidence - a.confidence || a.statement_pl.localeCompare(b.statement_pl));
@@ -203,6 +207,10 @@ export async function itemSetKey(sourceItemIds: string[]): Promise<string> {
   return (await sha256Hex(sorted.join(","))).slice(0, 16);
 }
 
-export function validateFactsDedupeKey(storyId: string, setKey: string): string {
-  return `VALIDATE_FACTS:${storyId}:${setKey}`;
+/**
+ * Klucz jobow od walidacji w dol. Wiaze job z zestawem materialow, z ktorego
+ * policzono fakty - job starszego zestawu rozpoznaje, ze jest nieaktualny.
+ */
+export function itemSetDedupeKey(type: JobType, storyId: string, setKey: string): string {
+  return `${type}:${storyId}:${setKey}`;
 }
