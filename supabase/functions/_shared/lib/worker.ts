@@ -2,7 +2,7 @@ import { claimJobs, completeJob, failJob } from "./jobs.ts";
 import { logError, logInfo } from "./log.ts";
 import type { HandlerContext } from "./handler-context.ts";
 import { isPipelineEnabled } from "./handler-context.ts";
-import { jobHandlers, STAGE_ONE_JOB_TYPES } from "../handlers/index.ts";
+import { ACTIVE_JOB_TYPES, jobHandlers } from "../handlers/index.ts";
 
 export async function processJobBatch(ctx: HandlerContext, limit = 10): Promise<number> {
   if (!(await isPipelineEnabled(ctx.client))) {
@@ -11,7 +11,7 @@ export async function processJobBatch(ctx: HandlerContext, limit = 10): Promise<
   }
 
   const jobs = await claimJobs(ctx.client, {
-    types: [...STAGE_ONE_JOB_TYPES],
+    types: ACTIVE_JOB_TYPES,
     limit,
     worker: ctx.worker ?? "process-jobs",
   });
@@ -21,7 +21,7 @@ export async function processJobBatch(ctx: HandlerContext, limit = 10): Promise<
 
     try {
       if (!handler) {
-        throw new Error(`Brak handlera dla ${job.type} w etapie 1.`);
+        throw new Error(`Brak handlera dla ${job.type}.`);
       }
 
       await handler(job, ctx);

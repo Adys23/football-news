@@ -1,5 +1,5 @@
 import { parseJobPayload } from "../contracts/jobs.ts";
-import { JobError } from "../lib/jobs.ts";
+import { enqueueJob, JobError } from "../lib/jobs.ts";
 import { logInfo } from "../lib/log.ts";
 import type { JobHandler } from "../lib/handler-context.ts";
 import type { EntityRecord } from "../lib/entities.ts";
@@ -9,7 +9,7 @@ import { categorySlugForEvent, classifyEventType, importanceFromTrust } from "..
 /**
  * Grupuje material w wydarzenie. Find-or-create jest w RPC
  * `link_source_item_to_story` (lock + trigram + encja + insert w jednej transakcji).
- * Bez LLM - EXTRACT_FACTS wchodzi w etapie 2.
+ * Bez LLM. Kazdy dolaczony material kolejkuje EXTRACT_FACTS dla calej historii.
  */
 export const handleProcessStory: JobHandler = async (job, ctx) => {
   const { sourceItemId } = parseJobPayload("PROCESS_STORY", job.payload);
@@ -39,6 +39,16 @@ export const handleProcessStory: JobHandler = async (job, ctx) => {
   if (!linked) {
     throw new JobError(`link_source_item_to_story nie zwrocilo historii dla ${sourceItemId}.`);
   }
+
+  // Klucz per material, nie per historia: unikalny dedupe_key obejmuje tez joby
+  // `running`, wiec klucz per historia gubilby zrodlo dolaczone w trakcie ekstrakcji.
+  // Powtorny koszt odcina cache ekstrakcji po zestawie materialow.
+  await enqueueJob(ctx.client, {
+    type: "EXTRACT_FACTS",
+    payload: { storyId: linked.out_story_id },
+    dedupeKey: `EXTRACT_FACTS:${linked.out_story_id}:${sourceItemId}`,
+    storyId: linked.out_story_id,
+  });
 
   logInfo("story.linked", {
     sourceItemId,
