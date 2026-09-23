@@ -116,6 +116,83 @@ export function factRowsFromExtraction(
   return [...rows.values()];
 }
 
+export type FactRow = {
+  id: string;
+  subject: string;
+  predicate: string;
+  object: string | null;
+  statement_pl: string;
+  confidence: number;
+  source_id: string | null;
+};
+
+/** Fakt po zlaczeniu wierszy z roznych zrodel. `id` to wiersz z najbardziej wiarygodnego zrodla. */
+export type FactGroup = {
+  id: string;
+  subject: string;
+  predicate: string;
+  object: string | null;
+  statement_pl: string;
+  confidence: number;
+  sources: { sourceId: string; trustScore: number }[];
+};
+
+/**
+ * Walidacja i pisanie widza kazdy fakt raz, nie raz na zrodlo. Kolejnosc:
+ * od najpewniejszego - od niej zaleza placeholdery {{fact_N}} w fixtures.
+ */
+export function groupFacts(rows: FactRow[], trustBySource: Map<string, number>): FactGroup[] {
+  const groups = new Map<string, { rows: FactRow[] }>();
+
+  for (const row of rows) {
+    const key = [row.subject, row.predicate, row.object ?? ""].join("\u0000");
+    const group = groups.get(key) ?? { rows: [] };
+    group.rows.push(row);
+    groups.set(key, group);
+  }
+
+  const trust = (row: FactRow) => (row.source_id ? (trustBySource.get(row.source_id) ?? 0) : 0);
+
+  return [...groups.values()]
+    .map(({ rows: members }) => {
+      const best = members.reduce((a, b) =>
+        trust(b) > trust(a) || (trust(b) === trust(a) && b.id < a.id) ? b : a,
+      );
+      const sources = new Map<string, number>();
+      for (const row of members) {
+        if (row.source_id) {
+          sources.set(row.source_id, trust(row));
+        }
+      }
+
+      return {
+        id: best.id,
+        subject: best.subject,
+        predicate: best.predicate,
+        object: best.object,
+        statement_pl: best.statement_pl,
+        confidence: Math.max(...members.map((row) => row.confidence)),
+        sources: [...sources].map(([sourceId, trustScore]) => ({ sourceId, trustScore })),
+      };
+    })
+    .sort((a, b) => b.confidence - a.confidence || a.statement_pl.localeCompare(b.statement_pl));
+}
+
+/** Eskalacja walidacji: niska pewnosc albo ten sam podmiot i orzeczenie z roznym dopelnieniem. */
+export function shouldEscalateValidation(
+  groups: FactGroup[],
+  escalationConfidence: number,
+): boolean {
+  const best = Math.max(0, ...groups.map((group) => group.confidence));
+  const objects = new Map<string, Set<string>>();
+  for (const group of groups) {
+    const key = `${group.subject}\u0000${group.predicate}`;
+    objects.set(key, (objects.get(key) ?? new Set()).add(group.object ?? ""));
+  }
+
+  return best < escalationConfidence || [...objects.values()].some((set) => set.size > 1);
+}
+
 /**
  * Klucz zestawu materialow historii, niezalezny od kolejnosci. Trafia do dedupe_key
  * joba VALIDATE_FACTS, wiec istnienie takiego joba oznacza, ze ten zestaw

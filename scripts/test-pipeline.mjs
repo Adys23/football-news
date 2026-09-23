@@ -145,10 +145,44 @@ if ((validateJobs.data ?? []).length !== 1) {
   fail(`Oczekiwano jednego joba VALIDATE_FACTS, jest ${validateJobs.data?.length ?? 0}.`);
 }
 
+console.log(`test:pipeline OK: 5 zrodel -> 1 ekstrakcja, ${facts.data?.length} faktow.`);
+
+// Walidacja: fixture zatwierdza trzy fakty, historia czeka na GENERATE_ARTICLE.
+const [assessment, story, articleJobs] = await Promise.all([
+  client
+    .from("story_assessments")
+    .select("publishability, approved_fact_ids, model_used")
+    .eq("story_id", storyId)
+    .maybeSingle(),
+  client.from("stories").select("status").eq("id", storyId).maybeSingle(),
+  client.from("jobs").select("status").eq("story_id", storyId).eq("type", "GENERATE_ARTICLE"),
+]);
+
+for (const result of [assessment, story, articleJobs]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+const factIds = new Set((facts.data ?? []).map((row) => row.id));
+const approved = assessment.data?.approved_fact_ids ?? [];
+
+if (assessment.data?.publishability !== "review" || approved.length !== 3) {
+  fail(`Oczekiwano oceny review z 3 faktami, jest ${JSON.stringify(assessment.data)}.`);
+}
+
+if (!approved.every((id) => factIds.has(id))) {
+  fail("Ocena zatwierdzila fakt spoza historii.");
+}
+
+if (story.data?.status !== "drafting" || (articleJobs.data ?? []).length !== 1) {
+  fail(`Oczekiwano statusu drafting i 1 joba GENERATE_ARTICLE, jest ${story.data?.status}.`);
+}
+
 await client.from("stories").delete().eq("id", storyId);
 await client.from("sources").delete().in("id", sourceIds);
 
-console.log(`test:pipeline OK: 5 zrodel -> 1 ekstrakcja, ${facts.data?.length} faktow.`);
+console.log("test:pipeline OK: walidacja -> 3 zatwierdzone fakty, historia w drafting.");
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

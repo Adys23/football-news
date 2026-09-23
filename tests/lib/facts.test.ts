@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { FactExtractionOutput } from "@contracts/facts.ts";
 import type { StorySourceRow } from "@shared/lib/facts.ts";
+import type { FactRow } from "@shared/lib/facts.ts";
 import {
   MAX_SOURCE_CONTENT_CHARS,
   buildExtractionInput,
   factRowsFromExtraction,
+  groupFacts,
   itemSetKey,
   shouldEscalateExtraction,
+  shouldEscalateValidation,
 } from "@shared/lib/facts.ts";
 
 const STORY_ID = "11111111-1111-4111-8111-111111111111";
@@ -145,5 +148,71 @@ describe("itemSetKey", () => {
     expect(await itemSetKey(["a", "b", "a"])).toBe(key);
     expect(await itemSetKey(["a", "b", "c"])).not.toBe(key);
     expect(key).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("groupFacts", () => {
+  const trust = new Map([
+    ["club", 1],
+    ["outlet", 0.85],
+  ]);
+
+  function row(id: string, overrides: Partial<FactRow> = {}): FactRow {
+    return {
+      id,
+      subject: "Manchester United",
+      predicate: "extended_contract_with",
+      object: "Bruno Fernandes",
+      statement_pl: "Manchester United przedluzyl kontrakt z Bruno Fernandesem.",
+      confidence: 0.9,
+      source_id: "outlet",
+      ...overrides,
+    };
+  }
+
+  it("laczy wiersze tego samego faktu i wybiera wiersz z najbardziej wiarygodnego zrodla", () => {
+    const [group, ...rest] = groupFacts(
+      [row("b"), row("a", { source_id: "club", confidence: 0.97 })],
+      trust,
+    );
+
+    expect(rest).toEqual([]);
+    expect(group).toMatchObject({ id: "a", confidence: 0.97 });
+    expect(group?.sources).toEqual([
+      { sourceId: "outlet", trustScore: 0.85 },
+      { sourceId: "club", trustScore: 1 },
+    ]);
+  });
+
+  it("sortuje od najpewniejszego faktu - od tego zaleza placeholdery fixtures", () => {
+    const groups = groupFacts(
+      [
+        row("x", { predicate: "contract_until", confidence: 0.8, statement_pl: "Umowa do 2027." }),
+        row("y", { confidence: 0.95 }),
+      ],
+      trust,
+    );
+
+    expect(groups.map((group) => group.id)).toEqual(["y", "x"]);
+  });
+});
+
+describe("shouldEscalateValidation", () => {
+  const group = {
+    id: "a",
+    subject: "Arsenal",
+    predicate: "transfer_fee",
+    object: "12 mln EUR",
+    statement_pl: "Arsenal zaplaci 12 mln EUR.",
+    confidence: 0.9,
+    sources: [],
+  };
+
+  it("eskaluje przy niskiej pewnosci i przy sprzecznych dopelnieniach", () => {
+    expect(shouldEscalateValidation([group], 0.8)).toBe(false);
+    expect(shouldEscalateValidation([{ ...group, confidence: 0.7 }], 0.8)).toBe(true);
+    expect(shouldEscalateValidation([group, { ...group, id: "b", object: "9 mln EUR" }], 0.8)).toBe(
+      true,
+    );
   });
 });

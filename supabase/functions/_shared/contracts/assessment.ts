@@ -44,6 +44,57 @@ export function canGenerateArticle(assessment: FactAssessmentOutput): boolean {
   return assessment.publishability !== "reject" && assessment.approved_facts.length > 0;
 }
 
+/** Progi z docs/ai-pipeline.md, sekcja 4. Obowiazuja niezaleznie od tego, co zwrocil model. */
+export const MIN_APPROVED_FACT_CONFIDENCE = 0.8;
+export const MIN_SOURCE_TRUST = 0.8;
+export const AUTO_MIN_CONFIDENCE = 0.9;
+
+/** Fakt historii widziany przez reguly: pewnosc z ekstrakcji i zrodla, ktore go podaja. */
+export type AssessedFact = {
+  id: string;
+  confidence: number;
+  sources: { sourceId: string; trustScore: number }[];
+};
+
+/**
+ * Naklada deterministyczne progi na ocene modelu. Model moze byc ostrozniejszy
+ * od regul (reject zostaje rejectem), ale nigdy mniej ostrozny: nie zatwierdzi
+ * faktu spoza historii i nie da `auto` bez dwoch niezaleznych zrodel.
+ */
+export function applyAssessmentRules(
+  assessment: FactAssessmentOutput,
+  facts: AssessedFact[],
+): { assessment: FactAssessmentOutput; unknownFactIds: string[] } {
+  const byId = new Map(facts.map((fact) => [fact.id, fact]));
+  const approved = assessment.approved_facts.filter((id) => byId.has(id));
+  const unknownFactIds = assessment.approved_facts.filter((id) => !byId.has(id));
+  const approvedFacts = approved.flatMap((id) => byId.get(id) ?? []);
+
+  const hasConfidentFact = approvedFacts.some(
+    (fact) => fact.confidence >= MIN_APPROVED_FACT_CONFIDENCE,
+  );
+  const sources = approvedFacts.flatMap((fact) => fact.sources);
+  const hasTrustedSource = sources.some((source) => source.trustScore >= MIN_SOURCE_TRUST);
+  const independentSources = new Set(sources.map((source) => source.sourceId)).size;
+
+  let publishability = assessment.publishability;
+  if (!hasConfidentFact || !hasTrustedSource) {
+    publishability = "reject";
+  } else if (
+    publishability === "auto" &&
+    (assessment.confidence < AUTO_MIN_CONFIDENCE ||
+      assessment.conflicts.length > 0 ||
+      independentSources < 2)
+  ) {
+    publishability = "review";
+  }
+
+  return {
+    assessment: { ...assessment, publishability, approved_facts: approved },
+    unknownFactIds,
+  };
+}
+
 /** Czy ocena wymaga mocniejszego modelu w kolejnym etapie. */
 export function requiresEscalation(
   assessment: FactAssessmentOutput,
