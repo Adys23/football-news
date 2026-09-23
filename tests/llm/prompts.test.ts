@@ -5,7 +5,7 @@ import {
   articleDraftOutputSchema,
   factAssessmentOutputSchema,
   factExtractionOutputSchema,
-  hasOnlyApprovedFacts,
+  draftIssues,
   qaScoresOutputSchema,
   seoOutputSchema,
   titleCandidatesOutputSchema,
@@ -71,16 +71,8 @@ describe("fixtures LLM", () => {
   it("artykul uzywa tylko zatwierdzonych faktow i miesci sie w limitach dlugosci", () => {
     const assessment = fixture("02-assess-facts", factAssessmentOutputSchema);
     const draft = fixture("03-write-article", articleDraftOutputSchema);
-    const paragraphs = draft.blocks.filter((block) => block.type === "paragraph");
-    const words = paragraphs
-      .map((block) => block.text.split(/\s+/).length)
-      .reduce((sum, count) => sum + count, 0);
 
-    expect(hasOnlyApprovedFacts(draft, assessment.approved_facts)).toBe(true);
-    expect(paragraphs.length).toBeGreaterThanOrEqual(4);
-    expect(paragraphs.length).toBeLessThanOrEqual(7);
-    expect(words).toBeGreaterThanOrEqual(250);
-    expect(words).toBeLessThanOrEqual(450);
+    expect(draftIssues(draft, assessment.approved_facts)).toEqual([]);
   });
 
   it("wybrany tytul jest jednym z kandydatow i kazdy kandydat przechodzi kontrole tytulu", () => {

@@ -37,6 +37,9 @@ export function categorySlugForEvent(
   return "pilka-nozna";
 }
 
+/** Od tej wagi historia jest pilna: pisze model eskalacyjny, a panel wyroznia ja osobno. */
+export const HIGH_IMPORTANCE = 80;
+
 export function importanceFromTrust(trustScore: number): number {
   return Math.max(0, Math.min(100, Math.round(trustScore * 100)));
 }

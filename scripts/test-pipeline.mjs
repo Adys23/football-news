@@ -179,10 +179,40 @@ if (story.data?.status !== "drafting" || (articleJobs.data ?? []).length !== 1) 
   fail(`Oczekiwano statusu drafting i 1 joba GENERATE_ARTICLE, jest ${story.data?.status}.`);
 }
 
+console.log("test:pipeline OK: walidacja -> 3 zatwierdzone fakty, historia w drafting.");
+
+// Pisanie: jeden artykul w draft, wersja AI w article_revisions, kolejka idzie do tytulu.
+const [articles, titleJobs] = await Promise.all([
+  client
+    .from("articles")
+    .select("id, status, model_used, article_revisions(edited_by)")
+    .eq("story_id", storyId),
+  client.from("jobs").select("status").eq("story_id", storyId).eq("type", "GENERATE_TITLE"),
+]);
+
+for (const result of [articles, titleJobs]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+const article = articles.data?.[0];
+if ((articles.data ?? []).length !== 1 || article?.status !== "draft") {
+  fail(`Oczekiwano jednego artykulu w draft, jest ${JSON.stringify(articles.data)}.`);
+}
+
+if (article.article_revisions?.length !== 1 || article.article_revisions[0]?.edited_by !== null) {
+  fail("Oczekiwano jednej wersji AI w article_revisions.");
+}
+
+if ((titleJobs.data ?? []).length !== 1) {
+  fail(`Oczekiwano jednego joba GENERATE_TITLE, jest ${titleJobs.data?.length ?? 0}.`);
+}
+
 await client.from("stories").delete().eq("id", storyId);
 await client.from("sources").delete().in("id", sourceIds);
 
-console.log("test:pipeline OK: walidacja -> 3 zatwierdzone fakty, historia w drafting.");
+console.log("test:pipeline OK: draft artykulu z wersja AI, kolejka -> GENERATE_TITLE.");
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

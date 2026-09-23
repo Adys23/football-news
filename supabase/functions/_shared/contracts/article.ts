@@ -142,6 +142,46 @@ export function isFastTrack(scores: QaScoresOutput, thresholds: QaThresholds): b
   );
 }
 
+/** Granice dlugosci tekstu z promptu 03-write-article.md. */
+export const DRAFT_PARAGRAPHS = { min: 4, max: 7 } as const;
+export const DRAFT_WORDS = { min: 250, max: 450 } as const;
+
+/** Liczba akapitow i slow w akapitach. Naglowki, cytaty i fact_box nie wliczaja sie do dlugosci. */
+export function measureDraft(blocks: ArticleBlock[]): { paragraphs: number; words: number } {
+  const paragraphs = blocks.flatMap((block) => (block.type === "paragraph" ? [block.text] : []));
+  const words = paragraphs.reduce((sum, text) => sum + text.split(/\s+/).filter(Boolean).length, 0);
+  return { paragraphs: paragraphs.length, words };
+}
+
+/**
+ * Deterministyczne warunki draftu, sprawdzane przed zapisem i ponownie w kontroli
+ * jakosci. Pusta lista oznacza draft zgodny z regulami.
+ */
+export function draftIssues(draft: ArticleDraftOutput, approvedFactIds: string[]): string[] {
+  const issues: string[] = [];
+  const approved = new Set(approvedFactIds);
+  const outside = draft.used_fact_ids.filter((id) => !approved.has(id));
+  const boxed = draft.blocks.flatMap((block) => (block.type === "fact_box" ? block.factIds : []));
+  const { paragraphs, words } = measureDraft(draft.blocks);
+
+  if (outside.length > 0) {
+    issues.push(`Fakty spoza zatwierdzonych: ${outside.join(", ")}.`);
+  }
+  if (boxed.some((id) => !approved.has(id))) {
+    issues.push("fact_box wskazuje fakt spoza zatwierdzonych.");
+  }
+  if (paragraphs < DRAFT_PARAGRAPHS.min || paragraphs > DRAFT_PARAGRAPHS.max) {
+    issues.push(
+      `Akapitow: ${paragraphs}, dozwolone ${DRAFT_PARAGRAPHS.min}-${DRAFT_PARAGRAPHS.max}.`,
+    );
+  }
+  if (words < DRAFT_WORDS.min || words > DRAFT_WORDS.max) {
+    issues.push(`Slow: ${words}, dozwolone ${DRAFT_WORDS.min}-${DRAFT_WORDS.max}.`);
+  }
+
+  return issues;
+}
+
 /** Czy tekst trzyma sie zatwierdzonych faktow. */
 export function hasOnlyApprovedFacts(
   draft: ArticleDraftOutput,
