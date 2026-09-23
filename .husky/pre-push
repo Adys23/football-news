@@ -6,6 +6,10 @@ set -e
 echo "--> verify (typecheck, lint, format, testy, build)"
 npm run verify
 
+echo "--> Edge Functions w runtime Deno (check + lint)"
+npm run deno:check
+npm run deno:lint
+
 echo "--> bramka bazy danych"
 npm run verify:db
 

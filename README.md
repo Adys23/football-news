@@ -20,7 +20,7 @@ Zacznij tutaj, zanim dotkniesz kodu:
 
 ## Start
 
-Wymagania: Node 24 (`.nvmrc`), Docker Desktop, Supabase CLI.
+Wymagania: Node 24 (`.nvmrc`), Docker Desktop, Supabase CLI, Deno 2 (`winget install DenoLand.Deno`) - do sprawdzania kodu Edge Functions.
 
 ```bash
 npm install

@@ -47,6 +47,6 @@ export async function sha256Hex(input: string): Promise<string> {
 }
 
 /** Hash materialu zrodlowego: sha256 z adresu i znormalizowanego tytulu. */
-export async function buildSourceItemHash(url: string, title: string): Promise<string> {
+export function buildSourceItemHash(url: string, title: string): Promise<string> {
   return sha256Hex(buildHashInput(url, normalizeTitle(title)));
 }

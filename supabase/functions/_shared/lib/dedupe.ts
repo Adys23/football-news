@@ -57,11 +57,11 @@ export function findEntityStory(
   return null;
 }
 
-export async function loadSimilarityThreshold(client: ServiceClient): Promise<number> {
+export function loadSimilarityThreshold(client: ServiceClient): Promise<number> {
   return numericSetting(client, "dedupe_similarity_threshold", DEFAULT_SIMILARITY_THRESHOLD);
 }
 
-export async function loadDedupeWindowHours(client: ServiceClient): Promise<number> {
+export function loadDedupeWindowHours(client: ServiceClient): Promise<number> {
   return numericSetting(client, "dedupe_window_hours", DEFAULT_DEDUPE_WINDOW_HOURS);
 }
 
