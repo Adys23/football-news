@@ -12,6 +12,7 @@ describe("worker", () => {
       "GENERATE_ARTICLE",
       "GENERATE_TITLE",
       "GENERATE_SEO",
+      "CHECK_ARTICLE",
     ]);
     for (const type of ACTIVE_JOB_TYPES) {
       expect(jobHandlers[type]).toBeTypeOf("function");

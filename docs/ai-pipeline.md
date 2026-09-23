@@ -358,6 +358,15 @@ W MVP **żaden wynik nie prowadzi do automatycznej publikacji**. `settings.auto_
 
 Do scoringu dochodzą sprawdzenia deterministyczne, tańsze i pewniejsze od modelu: czy każdy fakt z tekstu jest w `used_fact_ids`, czy nie ma zdania skopiowanego ze źródła (n-gramy, 8 słów), czy długość i liczba akapitów mieszczą się w zakresie, czy tytuł przechodzi listę zakazaną.
 
+Implementacja (`_shared/handlers/check-article.ts`, kontrole w `lib/article-checks.ts`):
+
+- `used_fact_ids` sprawdza `GENERATE_ARTICLE` przed zapisem (nie jest przechowywane w artykule); kontrola jakości sprawdza zapisane bloki: `fact_box` tylko z zatwierdzonych faktów, 4 - 7 akapitów, 250 - 450 słów,
+- kopiowanie: wspólne 8-gramy tekstu (lead, akapity, nagłówki, listy) z tytułami i treściami materiałów historii po normalizacji; cytat z atrybucją jest wyjątkiem,
+- każde trafienie kontroli deterministycznej trafia do `article_scores.issues` jako `high` z prefiksem `[kontrola]` i blokuje artykuł niezależnie od ocen modelu,
+- `review`: `articles.status = 'review'` i `stories.status = 'review'`; `blocked`: artykuł zostaje w `draft`, historia dostaje `blocked`,
+- `settings.max_articles_per_hour`: po osiągnięciu limitu job wraca z backoffem, zanim zapłaci za model; liczone są oceny z ostatniej godziny dla artykułów w `review` lub dalej,
+- ponowna ocena artykułu, który ma już `article_scores`, idzie na model eskalacyjny.
+
 ---
 
 ## 8. Routing modeli

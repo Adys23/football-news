@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Smoke etapu 1: pieć materialow o tym samym wydarzeniu -> jedna historia.
- * Wymaga dzialajacego lokalnego Supabase. Nie wola zewnetrznego HTTP ani LLM.
+ * Smoke pipeline'u: piec materialow o tym samym wydarzeniu -> jedna historia ->
+ * fakty -> ocena -> artykul w review. Wymaga dzialajacego lokalnego Supabase.
+ * Nie wola zewnetrznego HTTP ani LLM (fixtures przy LLM_ENABLED != true).
  */
 import { readFileSync } from "node:fs";
 import { createLocalServiceClient } from "./lib/local-supabase.mjs";
@@ -22,6 +23,19 @@ const client = createLocalServiceClient();
 const feeds = new Map();
 const sourceIds = [];
 
+// Resztki przerwanego przebiegu: najpierw historie, bo usuniecie zrodla z faktami
+// kilku zrodel tej samej historii koliduje na unikalnym indeksie facts.
+const { data: leftovers, error: leftoversError } = await client
+  .from("story_sources")
+  .select("story_id, source_items!inner(sources!inner(url))")
+  .like("source_items.sources.url", `${MARKER}%`);
+if (leftoversError) {
+  fail(`Odczyt resztek poprzedniego przebiegu: ${leftoversError.message}`);
+}
+const leftoverStories = [...new Set((leftovers ?? []).map((row) => row.story_id))];
+if (leftoverStories.length > 0) {
+  await client.from("stories").delete().in("id", leftoverStories);
+}
 await client.from("sources").delete().like("url", `${MARKER}%`);
 
 for (const [index, item] of items.slice(0, 5).entries()) {
@@ -147,7 +161,7 @@ if ((validateJobs.data ?? []).length !== 1) {
 
 console.log(`test:pipeline OK: 5 zrodel -> 1 ekstrakcja, ${facts.data?.length} faktow.`);
 
-// Walidacja: fixture zatwierdza trzy fakty, historia czeka na GENERATE_ARTICLE.
+// Walidacja: fixture zatwierdza trzy fakty i kolejkuje GENERATE_ARTICLE.
 const [assessment, story, articleJobs] = await Promise.all([
   client
     .from("story_assessments")
@@ -175,13 +189,13 @@ if (!approved.every((id) => factIds.has(id))) {
   fail("Ocena zatwierdzila fakt spoza historii.");
 }
 
-if (story.data?.status !== "drafting" || (articleJobs.data ?? []).length !== 1) {
-  fail(`Oczekiwano statusu drafting i 1 joba GENERATE_ARTICLE, jest ${story.data?.status}.`);
+if (!story.data || (articleJobs.data ?? []).length !== 1) {
+  fail(`Oczekiwano 1 joba GENERATE_ARTICLE, jest ${articleJobs.data?.length ?? 0}.`);
 }
 
-console.log("test:pipeline OK: walidacja -> 3 zatwierdzone fakty, historia w drafting.");
+console.log("test:pipeline OK: walidacja -> 3 zatwierdzone fakty, kolejka -> GENERATE_ARTICLE.");
 
-// Pisanie: jeden artykul w draft, wersja AI w article_revisions, kolejka idzie do tytulu.
+// Pisanie: jeden artykul, wersja AI w article_revisions, kolejka idzie do tytulu.
 const [articles, titleJobs] = await Promise.all([
   client
     .from("articles")
@@ -197,8 +211,8 @@ for (const result of [articles, titleJobs]) {
 }
 
 const article = articles.data?.[0];
-if ((articles.data ?? []).length !== 1 || article?.status !== "draft") {
-  fail(`Oczekiwano jednego artykulu w draft, jest ${JSON.stringify(articles.data)}.`);
+if ((articles.data ?? []).length !== 1 || !article) {
+  fail(`Oczekiwano jednego artykulu, jest ${JSON.stringify(articles.data)}.`);
 }
 
 if (article.article_revisions?.length !== 1 || article.article_revisions[0]?.edited_by !== null) {
@@ -249,12 +263,58 @@ if ((checkJobs.data ?? []).length !== 1) {
   fail(`Oczekiwano jednego joba CHECK_ARTICLE, jest ${checkJobs.data?.length ?? 0}.`);
 }
 
-await client.from("stories").delete().eq("id", storyId);
-await client.from("sources").delete().in("id", sourceIds);
-
 console.log(
   `test:pipeline OK: tytul i SEO zapisane (${seoArticle.data.slug}), kolejka -> CHECK_ARTICLE.`,
 );
+
+// Kontrola jakosci: definicja ukonczenia etapu 2 (docs/roadmap.md) - artykul w review,
+// tekst tylko z zatwierdzonych faktow, koszt kazdego etapu widoczny w llm_calls.
+const [finalArticle, finalStory, scores, allCalls] = await Promise.all([
+  client.from("articles").select("status, content").eq("id", article.id).single(),
+  client.from("stories").select("status").eq("id", storyId).single(),
+  client.from("article_scores").select("quality, unsupported_claims").eq("article_id", article.id),
+  client.from("llm_calls").select("stage, model, cost_usd, ok").eq("story_id", storyId),
+]);
+
+for (const result of [finalArticle, finalStory, scores, allCalls]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+if (finalArticle.data.status !== "review" || finalStory.data.status !== "review") {
+  fail(
+    `Oczekiwano artykulu i historii w review, jest ${finalArticle.data.status}/${finalStory.data.status}.`,
+  );
+}
+
+if ((scores.data ?? []).length !== 1 || scores.data[0].unsupported_claims !== 0) {
+  fail(`Oczekiwano jednej oceny bez twierdzen bez pokrycia, jest ${JSON.stringify(scores.data)}.`);
+}
+
+const boxedFacts = finalArticle.data.content.blocks.flatMap((block) =>
+  block.type === "fact_box" ? block.factIds : [],
+);
+if (!boxedFacts.every((id) => approved.includes(id))) {
+  fail("Tekst odwoluje sie do faktu spoza zatwierdzonych.");
+}
+
+const llmCalls = allCalls.data ?? [];
+const perStage = llmCalls
+  .map((row) => row.stage)
+  .sort()
+  .join(",");
+if (
+  perStage !== "extract,qa,seo,title,title,validate,write" ||
+  !llmCalls.every((row) => row.ok && row.model === "fixture" && Number(row.cost_usd) === 0)
+) {
+  fail(`Oczekiwano 7 udanych wywolan na fixtures, jest ${perStage}.`);
+}
+
+await client.from("stories").delete().eq("id", storyId);
+await client.from("sources").delete().in("id", sourceIds);
+
+console.log("test:pipeline OK: kontrola jakosci -> artykul w review, 7 wywolan LLM w llm_calls.");
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

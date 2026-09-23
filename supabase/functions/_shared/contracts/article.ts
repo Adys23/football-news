@@ -154,19 +154,16 @@ export function measureDraft(blocks: ArticleBlock[]): { paragraphs: number; word
 }
 
 /**
- * Deterministyczne warunki draftu, sprawdzane przed zapisem i ponownie w kontroli
- * jakosci. Pusta lista oznacza draft zgodny z regulami.
+ * Deterministyczne warunki tresci: fact_box tylko z zatwierdzonych faktow,
+ * liczba akapitow i slow. Sprawdzane przed zapisem draftu i w kontroli jakosci,
+ * ktora widzi zapisane bloki (used_fact_ids nie jest przechowywane w artykule).
  */
-export function draftIssues(draft: ArticleDraftOutput, approvedFactIds: string[]): string[] {
+export function contentIssues(blocks: ArticleBlock[], approvedFactIds: string[]): string[] {
   const issues: string[] = [];
   const approved = new Set(approvedFactIds);
-  const outside = draft.used_fact_ids.filter((id) => !approved.has(id));
-  const boxed = draft.blocks.flatMap((block) => (block.type === "fact_box" ? block.factIds : []));
-  const { paragraphs, words } = measureDraft(draft.blocks);
+  const boxed = blocks.flatMap((block) => (block.type === "fact_box" ? block.factIds : []));
+  const { paragraphs, words } = measureDraft(blocks);
 
-  if (outside.length > 0) {
-    issues.push(`Fakty spoza zatwierdzonych: ${outside.join(", ")}.`);
-  }
   if (boxed.some((id) => !approved.has(id))) {
     issues.push("fact_box wskazuje fakt spoza zatwierdzonych.");
   }
@@ -180,6 +177,16 @@ export function draftIssues(draft: ArticleDraftOutput, approvedFactIds: string[]
   }
 
   return issues;
+}
+
+/** Warunki draftu z modelu: tresc plus used_fact_ids wylacznie z zatwierdzonych. */
+export function draftIssues(draft: ArticleDraftOutput, approvedFactIds: string[]): string[] {
+  const approved = new Set(approvedFactIds);
+  const outside = draft.used_fact_ids.filter((id) => !approved.has(id));
+  return [
+    ...(outside.length > 0 ? [`Fakty spoza zatwierdzonych: ${outside.join(", ")}.`] : []),
+    ...contentIssues(draft.blocks, approvedFactIds),
+  ];
 }
 
 /** Czy tekst trzyma sie zatwierdzonych faktow. */

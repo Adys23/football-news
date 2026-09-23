@@ -78,7 +78,9 @@ Objaw: historie nie dochodzą do redaktora.
 1. Sprawdź `article_scores` i `story_assessments` dla kilku przypadków.
 2. Masowe `unsupported_claims > 0`: prompt pisania pozwala modelowi wychodzić poza fakty albo `used_fact_ids` nie jest poprawnie wypełniane. Popraw prompt, podnieś `prompt_version`, uruchom ewaluację na fixture'ach.
 3. Masowo niska jakość: sprawdź, czy fakty w ogóle są sensowne. Zły wynik na końcu zwykle znaczy zbyt ubogie wejście, nie zły prompt pisania.
-4. Nie podnoś progów jakości, żeby odblokować przepływ. Progi są bezpiecznikiem, nie regulatorem przepustowości.
+4. Wpisy `issues` z prefiksem `[kontrola]` pochodzą z kontroli deterministycznych (`lib/article-checks.ts`): fragment skopiowany ze źródła, tytuł niezgodny z regułami, `fact_box` spoza zatwierdzonych faktów, długość tekstu. Każdy taki wpis blokuje artykuł niezależnie od ocen modelu.
+5. Historie w `drafting` z artykułem w `draft` i martwym `CHECK_ARTICLE` z błędem „Limit … artykulow na godzine”: limit `settings.max_articles_per_hour` trwał dłużej niż backoff kolejki (około 3,5 minuty). Po upływie godziny: `requeue_dead_jobs('CHECK_ARTICLE')`. Nie podnoś limitu tylko po to, żeby ominąć ten krok.
+6. Nie podnoś progów jakości, żeby odblokować przepływ. Progi są bezpiecznikiem, nie regulatorem przepustowości.
 
 ---
 
@@ -117,3 +119,15 @@ Nie robimy tego bez potrzeby. Gdy trzeba:
 3. Joby w `queued` poczekają. Nie czyść kolejki.
 4. Po przywróceniu usługi: włącz pipeline, uruchom `requeue_stale_jobs()`, sprawdź `jobs:status`.
 5. Sprawdź, czy podczas awarii nie powstały artykuły z niepełnymi danymi - historie w `drafting` bez artykułu wymagają ponownego uruchomienia etapu.
+
+---
+
+## 11. Pipeline bez klucza OpenAI (tryb fixtures)
+
+Kiedy: praca lokalna, CI, diagnoza handlera bez kosztów.
+
+1. `LLM_ENABLED` inne niż `true` (także brak zmiennej) przełącza `callLlm` na `_shared/llm/fixtures/<prompt>.json`. Odpowiedź przechodzi przez ten sam schemat zod co odpowiedź modelu, a `llm_calls` dostaje wiersz z `model = 'fixture'` i kosztem 0.
+2. Fixtures opisują jedną historię (kontrakt Bruno Fernandesa). Dla innej historii przejdą walidację, ale treść nie będzie do niej pasować - to narzędzie do sprawdzania przepływu, nie jakości.
+3. Cały przepływ od RSS do artykułu w `review`: `npm run test:pipeline` (wymaga `supabase start`). Ostatnia linia `kontrola jakosci -> artykul w review, 7 wywolan LLM` oznacza, że każdy etap zadziałał.
+4. Job kończący się bez zmian z logiem `*.stale_*` jest nieaktualny: od ekstrakcji doszło źródło albo fakty zostały przeliczone. Nowa ekstrakcja zakolejkuje własny łańcuch - nie uruchamiaj starego ręcznie.
+5. Przed włączeniem prawdziwego modelu: `LLM_ENABLED=true`, `OPENAI_API_KEY` w `supabase/.env.local`, cennik modeli w `settings.model_prices` (bez niego `cost_usd = null`), `npm run llm:cost` po pierwszej historii.
