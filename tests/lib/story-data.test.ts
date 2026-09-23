@@ -203,7 +203,7 @@ describe("loadArticleContext", () => {
     leagues: [{ id: "l1", name: "Premier League" }],
   };
 
-  it("dodaje klub wspomnianego zawodnika z liga", async () => {
+  it("dodaje klub wspomnianego zawodnika z liga i zwraca aliasy do kontroli tytulu", async () => {
     const { ctx } = fakeCtx(tables);
 
     const result = await loadArticleContext(ctx, "Fernandes przedluzyl kontrakt do 2027 roku.");
@@ -221,6 +221,14 @@ describe("loadArticleContext", () => {
       clubs: [{ name: "Manchester United", country: "en", league: "Premier League" }],
     });
     expect(result.entityNames).toEqual(["Bruno Fernandes", "Manchester United"]);
+    // Aliasy do kontroli tytulu: "Manchesterem United" nie zawiera nazwy, ale zawiera "United".
+    expect(result.entityLabels).toEqual([
+      "Bruno Fernandes",
+      "Fernandes",
+      "Manchester United",
+      "United",
+      "Man Utd",
+    ]);
   });
 
   it("zamienia blad slownika na JobError", async () => {
