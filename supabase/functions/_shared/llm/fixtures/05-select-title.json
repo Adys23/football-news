@@ -1,0 +1,10 @@
+{
+  "selected": "Manchester United przedłużył kontrakt z Bruno Fernandesem do 2027 roku",
+  "reason": "Zawiera klub, zawodnika, czynność i rok końca umowy, bez przesady.",
+  "rejected_reasons": {
+    "2": "Informacja rozbita na dwa zdania, słabsza jasność.",
+    "3": "Nie wskazuje nazwy klubu.",
+    "4": "Nie podaje roku końca umowy.",
+    "5": "Nie mówi, że kontrakt został przedłużony."
+  }
+}

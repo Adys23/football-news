@@ -1,0 +1,40 @@
+{
+  "event_type": "contract",
+  "entities": [
+    { "type": "player", "name": "Bruno Fernandes" },
+    { "type": "club", "name": "Manchester United" }
+  ],
+  "facts": [
+    {
+      "subject": "Manchester United",
+      "predicate": "extended_contract_with",
+      "object": "Bruno Fernandes",
+      "statement_pl": "Manchester United przedłużył kontrakt z Bruno Fernandesem.",
+      "value": null,
+      "confidence": 0.97,
+      "source_indexes": [1, 2, 3]
+    },
+    {
+      "subject": "Bruno Fernandes",
+      "predicate": "contract_until",
+      "object": "Manchester United",
+      "statement_pl": "Nowa umowa Bruno Fernandesa z Manchesterem United obowiązuje do 2027 roku.",
+      "value": { "contract_until": "2027" },
+      "confidence": 0.95,
+      "source_indexes": [1, 2, 3]
+    },
+    {
+      "subject": "Manchester United",
+      "predicate": "officially_confirmed",
+      "object": "Bruno Fernandes",
+      "statement_pl": "Manchester United oficjalnie potwierdził przedłużenie umowy z Bruno Fernandesem.",
+      "value": null,
+      "confidence": 0.93,
+      "source_indexes": [1]
+    }
+  ],
+  "unclear": [
+    "Żadne ze źródeł nie podaje warunków finansowych nowej umowy.",
+    "Źródła nie podają dokładnej daty końca kontraktu, tylko rok 2027."
+  ]
+}

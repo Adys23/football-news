@@ -205,7 +205,7 @@ Jedno repozytorium, jedna aplikacja Next.js w katalogu głównym, cały backend 
 │     ├─ deno.json                 # import map: zod, supabase-js, openai
 │     ├─ _shared/
 │     │  ├─ contracts/             # zod + database.types.ts (wspólne z Next.js)
-│     │  ├─ prompts/               # 01-extract-facts.md ... 06-qa-check.md
+│     │  ├─ prompts/               # 01-extract-facts.md ... 07-generate-seo.md, versions.ts
 │     │  ├─ llm/                   # models.ts, call.ts, fixtures/
 │     │  ├─ handlers/              # jeden plik na typ joba
 │     │  └─ lib/                   # jobs.ts, rss.ts, dedupe.ts, hash.ts, log.ts

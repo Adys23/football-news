@@ -1,0 +1,41 @@
+{
+  "lead": "Bruno Fernandes zostaje w Manchesterze United na dłużej. Klub z Premier League oficjalnie potwierdził, że pomocnik podpisał nową umowę, która obowiązuje do 2027 roku.",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Manchester United przedłużył kontrakt z Bruno Fernandesem. Jak podaje klub w oficjalnym komunikacie, portugalski pomocnik związał się z zespołem nową umową. Tę samą informację przekazały w kolejnych godzinach również inne serwisy piłkarskie, które powołują się na decyzję klubu."
+    },
+    {
+      "type": "paragraph",
+      "text": "Nowy kontrakt obowiązuje do 2027 roku. Dla drużyny występującej w Premier League oznacza to, że jeden z zawodników środka pola ma uregulowaną sytuację na kilka najbliższych sezonów. Klub może planować skład bez ryzyka, że umowa pomocnika zbliży się do końca w trakcie najbliższych okien transferowych."
+    },
+    {
+      "type": "paragraph",
+      "text": "Przedłużenie kontraktu z piłkarzem, który już występuje w zespole, to inny rodzaj decyzji niż transfer. Nie wymaga porozumienia z innym klubem, bo dotyczy wyłącznie Manchesteru United i samego zawodnika. Dla kibiców najważniejsza informacja jest prosta: pomocnik, którego znają z obecnej kadry, pozostanie w niej dłużej niż dotychczas."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kim jest Bruno Fernandes"
+    },
+    {
+      "type": "paragraph",
+      "text": "Bruno Fernandes, a właściwie Bruno Miguel Borges Fernandes, to Portugalczyk grający na pozycji pomocnika. Obecnie jest zawodnikiem Manchesteru United, czyli klubu rywalizującego w Premier League, najwyższej klasie rozgrywkowej w Anglii. Przedłużenie umowy dotyczy więc piłkarza, który już teraz należy do kadry zespołu, a nie nowego nabytku."
+    },
+    {
+      "type": "paragraph",
+      "text": "Warto zwrócić uwagę na źródło tej informacji. Przedłużenie kontraktu potwierdził sam klub, a nie wyłącznie media czy agregatory. W przypadku umów zawodników to najmocniejszy rodzaj potwierdzenia, bo pochodzi od strony, która podpisuje dokument. Doniesienia innych serwisów pokrywają się z komunikatem Manchesteru United."
+    },
+    {
+      "type": "paragraph",
+      "text": "Artykuł opiera się wyłącznie na informacjach potwierdzonych przez klub i serwisy, które powołują się na jego decyzję. Jeśli Manchester United albo wiarygodne źródła przekażą kolejne szczegóły kontraktu, trafią one do tego tekstu jako aktualizacja, a nie do osobnego artykułu. Dzięki temu cała historia nowej umowy pomocnika pozostanie w jednym miejscu."
+    },
+    {
+      "type": "fact_box",
+      "title": "Najważniejsze fakty",
+      "factIds": ["{{fact_1}}", "{{fact_2}}", "{{fact_3}}"]
+    }
+  ],
+  "used_fact_ids": ["{{fact_1}}", "{{fact_2}}", "{{fact_3}}"],
+  "excerpt": "Manchester United przedłużył kontrakt z Bruno Fernandesem. Nowa umowa pomocnika obowiązuje do 2027 roku."
+}

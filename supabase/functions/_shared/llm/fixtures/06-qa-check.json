@@ -1,0 +1,15 @@
+{
+  "factual_accuracy": 0.96,
+  "originality": 0.9,
+  "seo": 0.91,
+  "clickbait": 0.02,
+  "quality": 0.92,
+  "unsupported_claims": 0,
+  "issues": [
+    {
+      "severity": "low",
+      "block": 5,
+      "message": "Akapit o źródle informacji częściowo powtarza treść akapitu pierwszego."
+    }
+  ]
+}
