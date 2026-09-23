@@ -37,5 +37,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase/functions/*/index.ts", "supabase/functions/_shared/llm/**"]
+  "exclude": ["node_modules", "supabase/functions/*/index.ts"]
 }
