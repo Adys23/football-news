@@ -209,10 +209,52 @@ if ((titleJobs.data ?? []).length !== 1) {
   fail(`Oczekiwano jednego joba GENERATE_TITLE, jest ${titleJobs.data?.length ?? 0}.`);
 }
 
+console.log("test:pipeline OK: draft artykulu z wersja AI, kolejka -> GENERATE_TITLE.");
+
+// Tytul i SEO: wybrany kandydat z fixture, slug z fixture, kolejka idzie do kontroli jakosci.
+const [seoArticle, stageCalls, checkJobs] = await Promise.all([
+  client
+    .from("articles")
+    .select("title, slug, seo_title, seo_description")
+    .eq("id", article.id)
+    .single(),
+  client.from("llm_calls").select("stage").eq("story_id", storyId).in("stage", ["title", "seo"]),
+  client.from("jobs").select("status").eq("article_id", article.id).eq("type", "CHECK_ARTICLE"),
+]);
+
+for (const result of [seoArticle, stageCalls, checkJobs]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+const stages = (stageCalls.data ?? [])
+  .map((row) => row.stage)
+  .sort()
+  .join(",");
+if (stages !== "seo,title,title") {
+  fail(`Oczekiwano 2 wywolan title i 1 seo, jest ${stages}.`);
+}
+
+if (
+  seoArticle.data.title !==
+    "Manchester United przedłużył kontrakt z Bruno Fernandesem do 2027 roku" ||
+  !seoArticle.data.slug.startsWith("bruno-fernandes-przedluzyl-kontrakt") ||
+  !seoArticle.data.seo_description
+) {
+  fail(`Tytul lub SEO niezgodne z fixtures: ${JSON.stringify(seoArticle.data)}.`);
+}
+
+if ((checkJobs.data ?? []).length !== 1) {
+  fail(`Oczekiwano jednego joba CHECK_ARTICLE, jest ${checkJobs.data?.length ?? 0}.`);
+}
+
 await client.from("stories").delete().eq("id", storyId);
 await client.from("sources").delete().in("id", sourceIds);
 
-console.log("test:pipeline OK: draft artykulu z wersja AI, kolejka -> GENERATE_TITLE.");
+console.log(
+  `test:pipeline OK: tytul i SEO zapisane (${seoArticle.data.slug}), kolejka -> CHECK_ARTICLE.`,
+);
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

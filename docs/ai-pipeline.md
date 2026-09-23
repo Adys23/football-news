@@ -321,6 +321,13 @@ Walidacja deterministyczna po stronie kodu, przed zapisem: długość, brak `!`,
 
 SEO (`07-generate-seo.md`) to osobne wywołanie po wyborze tytułu: z tytułu i leadu powstają `seo_title` (do 70 znaków), `seo_description` (120 - 165 znaków) i `slug`. Numer pliku jest dalszy niż QA, bo prompt doszedł po ustaleniu numeracji; kolejność jobów wyznacza tabela z sekcji 1, nie numer pliku.
 
+Implementacja (`generate-title.ts`, `generate-seo.ts`):
+
+- do wywołania B trafiają wyłącznie kandydaci, którzy przeszli `checkTitle` z encjami rozpoznanymi w faktach; wybór spoza tej listy albo niespełniający kontroli to błąd joba, tak samo jak brak jakiegokolwiek poprawnego kandydata,
+- gdy słownik zawodników i klubów nie rozpoznaje żadnej encji, wymóg encji w tytule nie jest sprawdzany - pozostałe reguły tak,
+- `seo_title` przechodzi `checkTitle`; zajęty slug dostaje sufiks `-2`, `-3` w granicy 90 znaków (`lib/slug.ts`),
+- oba etapy zapisują tylko artykuł w `draft`.
+
 ---
 
 ## 7. Etap 8: automatyczna kontrola jakości

@@ -19,8 +19,13 @@ export type ArticleContext = {
 
 export type ArticleContextResult = {
   context: ArticleContext;
-  /** Nazwy rozpoznanych zawodnikow i klubow - tytul musi zawierac co najmniej jedna. */
+  /** Nazwy rozpoznanych zawodnikow i klubow - wejscie promptu tytulow. */
   entityNames: string[];
+  /**
+   * Nazwy i aliasy do kontroli tytulu. Tytul odmienia nazwy ("Manchesterem United"),
+   * a alias ("United") czesto przetrwa odmiane tam, gdzie pelna nazwa nie.
+   */
+  entityLabels: string[];
 };
 
 export async function loadArticleContext(
@@ -73,5 +78,9 @@ export async function loadArticleContext(
       })),
     },
     entityNames: [...mentionedPlayers, ...mentionedClubs].map((entity) => entity.name),
+    entityLabels: [...mentionedPlayers, ...mentionedClubs].flatMap((entity) => [
+      entity.name,
+      ...(entity.aliases ?? []),
+    ]),
   };
 }
