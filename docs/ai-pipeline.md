@@ -348,7 +348,7 @@ Nie ma sensu przepalać najdroższego modelu na każdy artykuł. Nazwy modeli s�
 
 Kontrola kosztów:
 
-- `llm_calls` zapisuje tokeny i koszt każdego wywołania,
+- `llm_calls` zapisuje tokeny i koszt każdego wywołania; koszt liczony z cennika w `settings.model_prices` (`{"<model>": {"input_per_mtok": ..., "output_per_mtok": ...}}`, USD za milion tokenów) - model bez cennika zapisuje `cost_usd = null`,
 - `settings.daily_llm_budget_usd` - po przekroczeniu dispatcher przestaje kolejkować joby LLM i podnosi alert,
 - limit tokenów wejściowych per etap; treści źródeł są skracane do fragmentów istotnych dla wydarzenia,
 - cache wyników ekstrakcji po zestawie `source_items` - powtórne uruchomienie tego samego joba nie płaci drugi raz.
