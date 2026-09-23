@@ -2,12 +2,15 @@ import type { Database } from "../contracts/database.types.ts";
 import type { JobRow, ServiceClient } from "./jobs.ts";
 import { JobError } from "./jobs.ts";
 import type { FetchFn } from "./http.ts";
+import type { LlmEnv } from "../llm/env.ts";
 
 export type HandlerContext = {
   client: ServiceClient;
   fetchImpl?: FetchFn;
   now?: Date;
   worker?: string;
+  /** Domyslnie ze zmiennych srodowiskowych. Testy i smoke podaja wlasne. */
+  llmEnv?: LlmEnv;
 };
 
 export type JobHandler = (job: JobRow, ctx: HandlerContext) => Promise<void>;
