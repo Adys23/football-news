@@ -33,16 +33,16 @@ export type EditCheckResult = { ok: true; issues: string[] } | { ok: false; mess
  * Loadery pipeline'u dzialaja tu na sesji redaktora, wiec obowiazuje RLS.
  */
 export async function checkArticleEdit(
-  article: ArticleForEdit,
-  edit: { title: string; lead: string },
+  storyId: string,
+  edit: { title: string; lead: string; content: Json },
 ): Promise<EditCheckResult> {
-  const content = articleContentSchema.safeParse(article.content);
+  const content = articleContentSchema.safeParse(edit.content);
   if (!content.success) {
     return { ok: false, message: "Treść artykułu nie przechodzi walidacji schematu." };
   }
 
   const ctx = { client: await createSupabaseServerClient() };
-  const approved = await loadApprovedFacts(ctx, article.storyId);
+  const approved = await loadApprovedFacts(ctx, storyId);
   if (!approved) {
     return {
       ok: false,

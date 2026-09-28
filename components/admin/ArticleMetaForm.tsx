@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { MAX_TITLE_LENGTH, MIN_TITLE_LENGTH } from "@shared/lib/title-guard.ts";
 import { saveArticleMeta } from "@/app/admin/artykuly/[id]/actions";
+import type { ArticleEditState } from "@/lib/admin/article-edit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,25 +67,7 @@ export function ArticleMetaForm({
         ) : null}
       </div>
 
-      {state ? (
-        <div
-          role={state.status === "error" ? "alert" : "status"}
-          className={`rounded-md border p-3 text-sm ${
-            state.status === "error"
-              ? "border-red-300 bg-red-50 text-red-800"
-              : "border-green-300 bg-green-50 text-green-800"
-          }`}
-        >
-          <p className="font-medium">{state.message}</p>
-          {state.issues ? (
-            <ul className="mt-2 list-disc pl-5">
-              {state.issues.map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
+      {state ? <EditResult state={state} /> : null}
 
       <div>
         <Button type="submit" disabled={pending}>
@@ -92,5 +75,29 @@ export function ArticleMetaForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Wynik zapisu edycji, wspolny dla formularza tytulu i edytora blokow. */
+export function EditResult({ state }: { state: ArticleEditState }) {
+  const error = state.status === "error";
+  return (
+    <div
+      role={error ? "alert" : "status"}
+      className={`rounded-md border p-3 text-sm ${
+        error
+          ? "border-red-300 bg-red-50 text-red-800"
+          : "border-green-300 bg-green-50 text-green-800"
+      }`}
+    >
+      <p className="font-medium">{state.message}</p>
+      {state.issues ? (
+        <ul className="mt-2 list-disc pl-5">
+          {state.issues.map((issue) => (
+            <li key={issue}>{issue}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

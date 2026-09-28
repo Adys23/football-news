@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import type { Json } from "@contracts/index.ts";
 import {
   ARTICLE_NOT_FOUND,
   parseArticleMetaEdit,
@@ -28,7 +29,21 @@ export async function saveArticleMeta(
     return { status: "error", message: ARTICLE_NOT_FOUND };
   }
 
-  const check = await checkArticleEdit(article, { title, lead });
+  // Tresc wraca bez zmian w postaci z bazy: po parsowaniu zod funkcja uznalaby ja za edycje.
+  return saveArticleEdit(articleId, expectedUpdatedAt, article.storyId, {
+    title,
+    lead,
+    content: article.content,
+  });
+}
+
+async function saveArticleEdit(
+  articleId: string,
+  expectedUpdatedAt: string,
+  storyId: string,
+  edit: { title: string; lead: string; content: Json },
+): Promise<ArticleEditState> {
+  const check = await checkArticleEdit(storyId, edit);
   if (!check.ok) {
     return { status: "error", message: check.message };
   }
@@ -41,13 +56,12 @@ export async function saveArticleMeta(
   }
 
   const supabase = await createSupabaseServerClient();
-  // Tresc wraca bez zmian w postaci z bazy: po parsowaniu zod funkcja uznalaby ja za edycje.
   const { error } = await supabase.rpc("save_article_edit", {
     p_article_id: articleId,
     p_expected_updated_at: expectedUpdatedAt,
-    p_title: title,
-    p_lead: lead,
-    p_content: article.content,
+    p_title: edit.title,
+    p_lead: edit.lead,
+    p_content: edit.content,
   });
 
   if (error) {
