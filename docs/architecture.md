@@ -173,6 +173,10 @@ Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika 
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
 
+- Artykuł ma adres `/<slug kategorii>/<slug>` (jedna trasa `app/(site)/[category]/[slug]`); artykuł bez kategorii trafia pod `pilka-nozna`, a zła kategoria w adresie daje 308 na adres kanoniczny.
+- Dane publiczne czyta `lib/public/queries.ts` klientem anon bez ciasteczek (sesja redaktora nie wpuści szkicu do cache), z filtrem `status = 'published'` ponad RLS. Zapytania idą do Data Cache Next.js z tagami z `lib/public/cache-tags.ts` i `revalidate = 60` jako siatką bezpieczeństwa do czasu webhooka publikacji. `cacheComponents` jest wyłączone: włączenie dotyczy całej aplikacji, łącznie z panelem.
+- Aktualizacje (`article_updates`) bez `approved_by` nie trafiają na stronę.
+
 ### 3.9 Platform
 
 Warstwa wspólna: kolejka jobów, klient LLM z retry i logowaniem kosztów, kontrakty zod, logger, konfiguracja runtime w `settings`.

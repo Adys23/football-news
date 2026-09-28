@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { articlePath } from "@/lib/public/paths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE } from "@/lib/site";
 
@@ -11,7 +12,8 @@ export default async function HomePage() {
 
   const { data: articles, error } = await supabase
     .from("articles")
-    .select("id, slug, title, lead, published_at")
+    .select("id, slug, title, lead, published_at, categories(slug)")
+    .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(20);
 
@@ -28,7 +30,13 @@ export default async function HomePage() {
         <ul className="mt-10 space-y-8">
           {articles.map((article) => (
             <li key={article.id}>
-              <Link href={`/artykul/${article.slug}`} className="text-xl font-medium underline">
+              <Link
+                href={articlePath({
+                  slug: article.slug,
+                  categorySlug: article.categories?.slug ?? null,
+                })}
+                className="text-xl font-medium underline"
+              >
                 {article.title}
               </Link>
               {article.lead ? (
