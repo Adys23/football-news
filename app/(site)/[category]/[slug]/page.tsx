@@ -7,6 +7,7 @@ import { siteUrl } from "@/lib/env";
 import { formatPublicDateTime } from "@/lib/public/format";
 import { articlePath } from "@/lib/public/paths";
 import { getPublishedArticle } from "@/lib/public/queries";
+import { getArticleRedirectPath } from "@/lib/public/redirects";
 import { buildArticleMetadata } from "@/lib/seo/metadata";
 import {
   buildBreadcrumbJsonLd,
@@ -30,10 +31,23 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { slug } = await params;
   const article = await getPublishedArticle(slug);
   if (!article) {
+    await redirectFromOldSlug(slug);
     return {};
   }
 
   return buildArticleMetadata(article, siteUrl());
+}
+
+/**
+ * Stary slug (article_redirects, migracja 0023) daje 308 na aktualny adres kanoniczny.
+ * Wolane tez z generateMetadata: przy strumieniowanych metadanych strona i tak
+ * przekierowuje, ale dla botow metadane blokuja render i trafiaja tu pierwsze.
+ */
+async function redirectFromOldSlug(slug: string): Promise<void> {
+  const target = await getArticleRedirectPath(slug);
+  if (target) {
+    permanentRedirect(target);
+  }
 }
 
 // Tresci faktow nie sa jeszcze czytelne dla anona (plan etapu 4, PR 4.2a), wiec fact_box sie nie pokaze.
@@ -43,6 +57,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { category, slug } = await params;
   const article = await getPublishedArticle(slug);
   if (!article) {
+    await redirectFromOldSlug(slug);
     notFound();
   }
 
