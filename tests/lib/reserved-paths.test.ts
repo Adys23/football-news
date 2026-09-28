@@ -71,6 +71,28 @@ describe("RESERVED_PATH_SEGMENTS", () => {
   });
 });
 
+/** Lista z najnowszej migracji, ktora zaklada constraint categories_slug_not_reserved. */
+function databaseReservedSegments(): string[] {
+  const dir = join(ROOT, "supabase", "migrations");
+  const migration = readdirSync(dir)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .map((name) => readFileSync(join(dir, name), "utf8"))
+    .filter((sql) => /add constraint categories_slug_not_reserved/i.test(sql))
+    .at(-1);
+  const list = migration && /slug <> all \(array\[([\s\S]*?)\]/i.exec(migration)?.[1];
+  if (!list) {
+    throw new Error("Nie znaleziono constraintu categories_slug_not_reserved w migracjach");
+  }
+  return [...list.matchAll(/'([^']+)'/g)].map((match) => match[1] ?? "");
+}
+
+describe("categories_slug_not_reserved", () => {
+  it("blocks exactly the segments reserved in the app", () => {
+    expect([...databaseReservedSegments()].sort()).toEqual([...RESERVED_PATH_SEGMENTS].sort());
+  });
+});
+
 describe("isReachableArticle", () => {
   it("accepts an article with or without a category", () => {
     expect(isReachableArticle({ slug: "nowy-kontrakt", categorySlug: "transfery" })).toBe(true);

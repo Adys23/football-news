@@ -361,7 +361,7 @@ Wpisy dodaje trigger `articles_record_slug_redirect` (0023) przy każdej zmianie
 
 `categories`: `id`, `name`, `slug` (`transfery`, `pilka-nozna`, `ekstraklasa`), `description`, `seo_title`, `seo_description`, `parent_id`.
 
-Kategoria ma adres `/<slug>`, więc jej slug nie może być statycznym segmentem pierwszego poziomu z `app/` - constraint `categories_slug_not_reserved` (0024) odrzuca wstawienie i zmianę na taki slug. Lista w migracji musi być zgodna z `RESERVED_PATH_SEGMENTS` w `lib/public/paths.ts` (stała wchodzi z PR #26); nowy segment to wpis tam i nowa migracja, która usuwa i ponownie dodaje constraint. Slugi klubów, zawodników i autorów żyją pod własnymi prefiksami i tej blokady nie potrzebują.
+Kategoria ma adres `/<slug>`, więc jej slug nie może być statycznym segmentem pierwszego poziomu z `app/` - constraint `categories_slug_not_reserved` (0024) odrzuca wstawienie i zmianę na taki slug. Lista w migracji musi być zgodna z `RESERVED_PATH_SEGMENTS` w `lib/public/paths.ts` - pilnuje tego test `tests/lib/reserved-paths.test.ts`; nowy segment to wpis tam i nowa migracja, która usuwa i ponownie dodaje constraint. Slugi klubów, zawodników i autorów żyją pod własnymi prefiksami i tej blokady nie potrzebują.
 
 ---
 
