@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Tylko Supabase CLI: od jego wersji zalezy database.types.ts, wiec trzymamy
+  # najnowsza i podnosimy ja w jednym miejscu. PR z podbiciem musi zawierac
+  # przebudowane typy (npm run db:types), inaczej job "Migracje, RLS i typy" jest czerwony.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: supabase
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: []
