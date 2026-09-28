@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArticleDecision } from "@/components/admin/ArticleDecision";
 import { ArticleMetaForm } from "@/components/admin/ArticleMetaForm";
 import { BlockEditor } from "@/components/admin/BlockEditor";
 import { BlockRenderer } from "@/components/article/BlockRenderer";
@@ -29,6 +30,7 @@ import {
   type QaIssue,
   type SeoFieldCheck,
 } from "@/lib/admin/review";
+import { DECISION_STATUSES, publishBlockers } from "@/lib/admin/publish";
 import { getArticleForReview } from "@/lib/admin/review-data";
 import { requireRole } from "@/lib/auth/dal";
 
@@ -101,6 +103,10 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
   const stale = assessment ? assessmentIsStale(assessment.updatedAt, sources) : false;
   const sourceNumbers = assessmentSourceNumbers(sources);
   const scoresStale = scores ? scoresAreStale(scores.checkedAt, article.lastEditedAt) : false;
+  const blockers = publishBlockers({
+    ...article,
+    unsupportedClaims: scores?.unsupportedClaims ?? null,
+  });
   const sourceLabel = (index: number) => (!stale && sourceNumbers.get(index)) || `źródło ${index}`;
 
   return (
@@ -148,6 +154,23 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
           )}
         </div>
       </article>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Decyzja</h2>
+        {DECISION_STATUSES.includes(article.status) ? (
+          <ArticleDecision
+            articleId={article.id}
+            updatedAt={article.updatedAt}
+            blockers={blockers}
+          />
+        ) : (
+          <p className="mt-2 text-sm text-neutral-600">
+            {article.status === "published" && article.publishedAt
+              ? `Opublikowany ${formatNewsroomTime(article.publishedAt)}.`
+              : `Status: ${ARTICLE_STATUS_LABELS[article.status]}. Decyzja nie jest już możliwa.`}
+          </p>
+        )}
+      </section>
 
       {article.status === "review" ? (
         <section className="mt-12">

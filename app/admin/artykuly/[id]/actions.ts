@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { articleContentSchema, type Json } from "@contracts/index.ts";
 import {
   ARTICLE_NOT_FOUND,
@@ -11,6 +11,14 @@ import {
   type ArticleEditState,
 } from "@/lib/admin/article-edit";
 import { checkArticleEdit, getArticleForEdit } from "@/lib/admin/article-edit-data";
+import {
+  decisionErrorMessage,
+  parsePublishInput,
+  parseRejectInput,
+  publishBlockers,
+  type DecisionState,
+} from "@/lib/admin/publish";
+import { getArticleForReview } from "@/lib/admin/review-data";
 import { requireRole } from "@/lib/auth/dal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -109,4 +117,79 @@ async function saveArticleEdit(
 
   refresh();
   return { status: "saved", message: "Zapisano zmiany." };
+}
+
+const INCOMPLETE_FORM: DecisionState = { status: "error", message: "Formularz jest niekompletny." };
+
+export async function publishArticle(
+  _prev: DecisionState,
+  formData: FormData,
+): Promise<DecisionState> {
+  await requireRole("editor");
+
+  const parsed = parsePublishInput(formData);
+  if (!parsed.success) {
+    return INCOMPLETE_FORM;
+  }
+  const { articleId, expectedUpdatedAt } = parsed.data;
+
+  const article = await getArticleForReview(articleId);
+  if (!article) {
+    return { status: "error", message: ARTICLE_NOT_FOUND };
+  }
+  const blockers = publishBlockers({
+    ...article,
+    unsupportedClaims: article.scores?.unsupportedClaims ?? null,
+  });
+  if (blockers.length > 0) {
+    return { status: "error", message: "Artykuł nie jest gotowy do publikacji.", issues: blockers };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("publish_article", {
+    p_article_id: articleId,
+    p_expected_updated_at: expectedUpdatedAt,
+  });
+  return finishDecision(articleId, "Publikacja", error);
+}
+
+export async function rejectArticle(
+  _prev: DecisionState,
+  formData: FormData,
+): Promise<DecisionState> {
+  await requireRole("editor");
+
+  const parsed = parseRejectInput(formData);
+  if (!parsed.success) {
+    const reasonError = parsed.error.issues.find((issue) => issue.path[0] === "reason");
+    return reasonError ? { status: "error", message: reasonError.message } : INCOMPLETE_FORM;
+  }
+  const { articleId, expectedUpdatedAt, reason } = parsed.data;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("reject_article", {
+    p_article_id: articleId,
+    p_expected_updated_at: expectedUpdatedAt,
+    ...(reason ? { p_reason: reason } : {}),
+  });
+  return finishDecision(articleId, "Odrzucenie", error);
+}
+
+/** Publiczny cache uniewaznia webhook publikacji, tu tylko widoki panelu. */
+function finishDecision(
+  articleId: string,
+  action: string,
+  error: { code?: string; message: string } | null,
+): DecisionState {
+  if (error) {
+    const message = decisionErrorMessage(error.code);
+    if (!message) {
+      throw new Error(`${action} artykulu ${articleId}: ${error.message}`);
+    }
+    return { status: "error", message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/artykuly/${articleId}`);
+  return undefined;
 }
