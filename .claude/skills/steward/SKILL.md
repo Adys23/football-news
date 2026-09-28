@@ -22,11 +22,11 @@ Przed poprawką odtwórz błąd, po poprawce pokaż ten sam check na zielono. Ma
 
 Przed każdym pushem: `npm run verify:all`. Jeśli część bramek nie może ruszyć (brak Dockera, brak `deno`), uruchom resztę i napisz wprost, czego nie uruchomiono i dlaczego. Zmian w `supabase/**` nie pushuj bez przejścia `verify:db` lokalnie albo bez jasnej informacji, że sprawdzi je dopiero job `db`.
 
-CI używa Supabase CLI `2.117.0`. Inna wersja lokalnie potrafi wygenerować `database.types.ts` różniący się formatem - to nie jest błąd PR.
+Supabase CLI jest przypięty w `devDependencies` w `package.json`. CI i skrypty z `scripts/` (przez `scripts/lib/run.mjs`) biorą go z `node_modules/.bin`, więc lokalnie wystarczy `npm install`. Nie instaluj CLI globalnie w innej wersji - generator typów zmienia wyjście między wersjami. W sesji w chmurze Docker, `deno` i zależności przygotowuje `.claude/hooks/session-start.sh`; jeśli czegoś brakuje, uruchom ten skrypt ponownie, zamiast obchodzić hook.
 
 ## 2. Typowe czerwone bramki i właściwa naprawa
 
-- **Rozjazd `database.types.ts`**: `supabase db reset`, potem `npm run db:types`. Nigdy nie edytuj pliku ręcznie i nie formatuj go Prettierem (jest w `.prettierignore`).
+- **Rozjazd `database.types.ts`**: `supabase db reset`, potem `npm run db:types` - skrypt sam formatuje plik. Nigdy nie edytuj go ręcznie i nie formatuj osobno (jest w `.prettierignore`). Wersję CLI podnosisz tylko w `package.json`, razem z regeneracją typów.
 - **Błąd w migracji już scalonej do `main`**: nowa migracja (`supabase migration new <nazwa>`, kolejny wolny numer), nigdy edycja starej.
 - **Test wersji promptu** (`tests/llm/prompts.test.ts`): zmiana pliku w `_shared/prompts/` wymaga podbicia `version` i `hash` w `_shared/prompts/versions.ts`. Sama zmiana promptu idzie w osobnym PR niż zmiana handlera.
 - **Próg pokrycia**: dopisz realny test dla `_shared/lib/**` lub `_shared/contracts/**`. Progów nie obniżasz, testów-atrap nie piszesz.
@@ -66,9 +66,9 @@ Nie pushujesz, tylko opisujesz propozycję i czekasz na decyzję właściciela, 
 
 Opis trzyma sekcje z [.github/pull_request_template.md](../../../.github/pull_request_template.md). Po każdej poprawce aktualizujesz:
 
-- **Obszary ryzyka**: zaznacz RLS, schemat bazy, prompty, pipeline publikacji, jeśli poprawka ich dotyka.
-- **Weryfikacja**: tylko to, co faktycznie uruchomiono.
-- **Czego nie sprawdziłem**: jawnie, na przykład "nie uruchomiłem `verify:db`, brak Dockera w środowisku".
+- **Jak to sprawdziłem**: konkretne komendy i wyniki, tylko to, co faktycznie uruchomiono.
+- **Czego nie sprawdziłem**: sekcja obowiązkowa, jawnie, na przykład "nie uruchomiłem `verify:db`, brak Dockera w środowisku".
+- **Wpływ na dane i bezpieczeństwo** oraz **Wpływ na treść i jakość**: odhacz punkty, które poprawka dotyka (migracja, RLS, `database.types.ts`, sekrety, publikacja, `PROMPT_VERSIONS`), i dopisz uzasadnienie, jeśli któryś nie jest spełniony.
 
 ## 7. Komunikacja
 
