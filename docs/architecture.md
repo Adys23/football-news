@@ -164,6 +164,11 @@ Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `s
 - zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,
 - gdy ostatnia rewizja redaktora jest późniejsza niż `article_scores.checked_at`, sekcja „Ocena AI” pokazuje, że ocena dotyczy wersji sprzed edycji. Ponowna ocena po edycji to osobna zmiana pipeline'u.
 
+Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika w `lib/admin/ops.ts`) jest tylko dla admina, zgodnie z polityką `jobs_admin_select`:
+
+- lista jobów `dead` i `failed` (martwe pierwsze, limit 100) z typem, liczbą prób, początkiem błędu i linkiem do artykułu albo listy historii. `jobs` nie ma `updated_at`, więc martwy job pokazuje `processed_at` ustawiane przez `fail_job`, a `failed` termin kolejnej próby (`next_run_at`),
+- „Ponów” to server action: `requireRole('admin')`, walidacja id zodem, RPC `requeue_dead_job` na sesji admina (bez `service_role`), potem `revalidatePath('/admin/joby')`. Rolę sprawdza też sama funkcja w bazie.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
