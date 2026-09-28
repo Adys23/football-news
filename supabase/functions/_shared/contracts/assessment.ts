@@ -44,10 +44,18 @@ export function canGenerateArticle(assessment: FactAssessmentOutput): boolean {
   return assessment.publishability !== "reject" && assessment.approved_facts.length > 0;
 }
 
-/** Progi z docs/ai-pipeline.md, sekcja 4. Obowiazuja niezaleznie od tego, co zwrocil model. */
+/**
+ * Progi z docs/ai-pipeline.md, sekcja 4. Obowiazuja niezaleznie od tego, co zwrocil model.
+ * Wartosci runtime sa w `settings`; te stale to wartosci domyslne.
+ */
 export const MIN_APPROVED_FACT_CONFIDENCE = 0.8;
 export const MIN_SOURCE_TRUST = 0.8;
 export const AUTO_MIN_CONFIDENCE = 0.9;
+
+export type AssessmentThresholds = {
+  minApprovedFactConfidence: number;
+  minSourceTrust: number;
+};
 
 /** Fakt historii widziany przez reguly: pewnosc z ekstrakcji i zrodla, ktore go podaja. */
 export type AssessedFact = {
@@ -64,6 +72,10 @@ export type AssessedFact = {
 export function applyAssessmentRules(
   assessment: FactAssessmentOutput,
   facts: AssessedFact[],
+  thresholds: AssessmentThresholds = {
+    minApprovedFactConfidence: MIN_APPROVED_FACT_CONFIDENCE,
+    minSourceTrust: MIN_SOURCE_TRUST,
+  },
 ): { assessment: FactAssessmentOutput; unknownFactIds: string[] } {
   const byId = new Map(facts.map((fact) => [fact.id, fact]));
   const approved = assessment.approved_facts.filter((id) => byId.has(id));
@@ -71,10 +83,10 @@ export function applyAssessmentRules(
   const approvedFacts = approved.flatMap((id) => byId.get(id) ?? []);
 
   const hasConfidentFact = approvedFacts.some(
-    (fact) => fact.confidence >= MIN_APPROVED_FACT_CONFIDENCE,
+    (fact) => fact.confidence >= thresholds.minApprovedFactConfidence,
   );
   const sources = approvedFacts.flatMap((fact) => fact.sources);
-  const hasTrustedSource = sources.some((source) => source.trustScore >= MIN_SOURCE_TRUST);
+  const hasTrustedSource = sources.some((source) => source.trustScore >= thresholds.minSourceTrust);
   const independentSources = new Set(sources.map((source) => source.sourceId)).size;
 
   let publishability = assessment.publishability;

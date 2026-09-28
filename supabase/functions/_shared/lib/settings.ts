@@ -19,6 +19,8 @@ export const pipelineSettingsSchema = z.object({
   daily_llm_budget_usd: z.number().nonnegative().default(15),
   min_fact_confidence: z.number().min(0).max(1).default(0.6),
   escalation_confidence: z.number().min(0).max(1).default(0.8),
+  min_approved_fact_confidence: z.number().min(0).max(1).default(0.8),
+  min_source_trust: z.number().min(0).max(1).default(0.8),
   quality_threshold: z.number().min(0).max(1).default(0.9),
   clickbait_threshold: z.number().min(0).max(1).default(0.1),
   max_articles_per_hour: z.number().int().positive().default(12),

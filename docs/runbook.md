@@ -79,7 +79,7 @@ Objaw: historie nie dochodzą do redaktora.
 2. Masowe `unsupported_claims > 0`: prompt pisania pozwala modelowi wychodzić poza fakty albo `used_fact_ids` nie jest poprawnie wypełniane. Popraw prompt, podnieś `prompt_version`, uruchom ewaluację na fixture'ach.
 3. Masowo niska jakość: sprawdź, czy fakty w ogóle są sensowne. Zły wynik na końcu zwykle znaczy zbyt ubogie wejście, nie zły prompt pisania.
 4. Wpisy `issues` z prefiksem `[kontrola]` pochodzą z kontroli deterministycznych (`lib/article-checks.ts`): fragment skopiowany ze źródła, tytuł niezgodny z regułami, `fact_box` spoza zatwierdzonych faktów, długość tekstu. Każdy taki wpis blokuje artykuł niezależnie od ocen modelu.
-5. Historie w `drafting` z artykułem w `draft` i martwym `CHECK_ARTICLE` z błędem „Limit … artykulow na godzine”: limit `settings.max_articles_per_hour` trwał dłużej niż backoff kolejki (około 3,5 minuty). Po upływie godziny: `requeue_dead_jobs('CHECK_ARTICLE')`. Nie podnoś limitu tylko po to, żeby ominąć ten krok.
+5. Artykuły w `draft` z `CHECK_ARTICLE` w `queued` i błędem „Limit … artykulow na godzine - odlozone”: działa limit `settings.max_articles_per_hour`. Job jest odłożony przez `defer_job` do chwili zwolnienia miejsca w oknie godzinowym i nie zużywa prób - nic nie trzeba robić. Nie podnoś limitu tylko po to, żeby przyspieszyć kolejkę.
 6. Nie podnoś progów jakości, żeby odblokować przepływ. Progi są bezpiecznikiem, nie regulatorem przepustowości.
 
 ---
