@@ -19,7 +19,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export interface DashboardCounts {
   newStories: number;
   inReview: number;
-  approved: number;
   publishedToday: number;
 }
 
@@ -40,17 +39,16 @@ export async function getDashboardCounts(now: Date): Promise<DashboardCounts> {
   const supabase = await createSupabaseServerClient();
   const articles = () => supabase.from("articles").select("id", { count: "exact", head: true });
 
-  const [newStories, inReview, approved, publishedToday] = await Promise.all([
+  const [newStories, inReview, publishedToday] = await Promise.all([
     supabase
       .from("stories")
       .select("id", { count: "exact", head: true })
       .gte("first_seen_at", hoursAgo(now, NEW_STORIES_WINDOW_HOURS).toISOString()),
     articles().eq("status", "review"),
-    articles().eq("status", "approved"),
     articles().eq("status", "published").gte("published_at", startOfDayInZone(now).toISOString()),
   ]);
 
-  for (const result of [newStories, inReview, approved, publishedToday]) {
+  for (const result of [newStories, inReview, publishedToday]) {
     if (result.error) {
       throw readFailed("licznikow panelu", result.error.message);
     }
@@ -59,7 +57,6 @@ export async function getDashboardCounts(now: Date): Promise<DashboardCounts> {
   return {
     newStories: newStories.count ?? 0,
     inReview: inReview.count ?? 0,
-    approved: approved.count ?? 0,
     publishedToday: publishedToday.count ?? 0,
   };
 }
