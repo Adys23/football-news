@@ -194,7 +194,7 @@ flowchart TD
 
 ### 4.3 Baza danych - job `db`
 
-- `supabase/setup-cli`, `supabase start`, `supabase db reset` na migracjach i seedzie.
+- `supabase/setup-cli` w przypiętej wersji (zgodnej z lokalnym CLI, bo od niej zależy format `database.types.ts`), `supabase start`, `supabase db reset` na migracjach i seedzie.
 - `supabase db lint` - błędy blokują.
 - Regeneracja `database.types.ts` i `git diff --exit-code` - niezsynchronizowane typy blokują.
 - Testy RLS w SQL: dla każdej tabeli publicznej sprawdzenie, że rola `anon` widzi tylko to, co powinna (w szczególności: brak dostępu do `sources`, `source_items`, `stories`, `facts`, `jobs`, `llm_calls` oraz do artykułów innych niż `published`).
