@@ -38,7 +38,9 @@ export interface ArticleForReview {
   slug: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  categoryId: string | null;
   status: Enums<"article_status">;
+  publishedAt: string | null;
   modelUsed: string | null;
   promptVersion: string | null;
   createdAt: string;
@@ -72,7 +74,7 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
   const { data: article, error } = await supabase
     .from("articles")
     .select(
-      "id, title, lead, content, slug, seo_title, seo_description, status, model_used, prompt_version, created_at, updated_at, article_scores(factual_accuracy, originality, seo, clickbait, quality, unsupported_claims, issues, model_used, prompt_version, checked_at), stories!inner(id, title, importance, event_type, status, story_assessments(publishability, confidence, conflicts, approved_fact_ids, reasoning, model_used, prompt_version, updated_at))",
+      "id, title, lead, content, slug, seo_title, seo_description, category_id, status, published_at, model_used, prompt_version, created_at, updated_at, article_scores(factual_accuracy, originality, seo, clickbait, quality, unsupported_claims, issues, model_used, prompt_version, checked_at), stories!inner(id, title, importance, event_type, status, story_assessments(publishability, confidence, conflicts, approved_fact_ids, reasoning, model_used, prompt_version, updated_at))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -128,7 +130,9 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
     slug: article.slug,
     seoTitle: article.seo_title,
     seoDescription: article.seo_description,
+    categoryId: article.category_id,
     status: article.status,
+    publishedAt: article.published_at,
     modelUsed: article.model_used,
     promptVersion: article.prompt_version,
     createdAt: article.created_at,

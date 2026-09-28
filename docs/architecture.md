@@ -145,7 +145,7 @@ Panel `/admin`: dashboard z licznikami, kolejka do weryfikacji sortowana po `imp
 
 Dashboard (`app/admin/page.tsx`, dane w `lib/admin/dashboard-data.ts`) czyta wyłącznie na sesji redaktora, przez RLS:
 
-- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), gotowe do publikacji (`approved`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
+- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
 - kolejka do weryfikacji: artykuły `review` posortowane po `stories.importance`, potem `story_assessments.confidence`, a przy remisie wyżej ten, który dłużej czeka. Po wadze sortuje już baza, przed limitem 200 pozycji; po pewności z zagnieżdżonej oceny PostgREST sortować nie umie, więc robi to kod. Gdy kolejka jest dłuższa niż limit, panel pokazuje „Pokazano X z Y”,
 - sekcja „Pilne”: historie z `importance >= 80` w statusach od `new` do `approved`, aktualizowane w ciągu doby. Próg to `HIGH_IMPORTANCE` z `_shared/lib/taxonomy.ts` (ten sam eskaluje model), a nie wpis w `settings`, bo `settings` jest widoczne tylko dla admina.
 
@@ -166,6 +166,12 @@ Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `s
 - przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
 - zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,
 - gdy ostatnia rewizja redaktora jest późniejsza niż `article_scores.checked_at`, sekcja „Ocena AI” pokazuje, że ocena dotyczy wersji sprzed edycji. Ponowna ocena po edycji to osobna zmiana pipeline'u.
+
+Publikacja i odrzucenie (`components/admin/ArticleDecision.tsx`, server actions `publishArticle` i `rejectArticle`, logika w `lib/admin/publish.ts`) są dostępne dla artykułów `review` i `approved`:
+
+- „Publikuj” jest zablokowany, gdy `publishBlockers` zwraca powody: brak oceny automatycznej, `unsupported_claims > 0`, brak leadu lub kategorii, treść pusta albo spoza schematu, pola SEO poza limitami `seoOutputSchema`. Gdy ocena automatyczna jest sprzed edycji redaktora, publikacja wymaga zaznaczenia potwierdzenia (sprawdza je też baza). Server action liczy blokady ponownie przed wywołaniem RPC `publish_article`,
+- „Odrzuć” przyjmuje opcjonalny powód (do 500 znaków), który trafia do `audit_log`,
+- po decyzji `revalidatePath` odświeża dashboard i widok artykułu; cache publiczny unieważnia webhook publikacji (sekcja 7).
 
 Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika w `lib/admin/ops.ts`) jest tylko dla admina, zgodnie z polityką `jobs_admin_select`:
 
