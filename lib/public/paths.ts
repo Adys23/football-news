@@ -13,3 +13,8 @@ export function isValidSlug(value: string): boolean {
 export function articlePath(article: { slug: string; categorySlug: string | null }): string {
   return `/${article.categorySlug ?? DEFAULT_CATEGORY_SLUG}/${article.slug}`;
 }
+
+/** Sciezka kanoniczna listy kategorii: /<kategoria> (docs/architecture.md §4). */
+export function categoryPath(categorySlug: string): string {
+  return `/${categorySlug}`;
+}

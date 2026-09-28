@@ -187,6 +187,7 @@ Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS 
 - Artykuł ma adres `/<slug kategorii>/<slug>` (jedna trasa `app/(site)/[category]/[slug]`); artykuł bez kategorii trafia pod `pilka-nozna`, a zła kategoria w adresie daje 308 na adres kanoniczny.
 - Dane publiczne czyta `lib/public/queries.ts` klientem anon bez ciasteczek (sesja redaktora nie wpuści szkicu do cache), z filtrem `status = 'published'` ponad RLS. Zapytania idą do Data Cache Next.js z tagami z `lib/public/cache-tags.ts` i `revalidate = 60` jako siatką bezpieczeństwa do czasu webhooka publikacji. `cacheComponents` jest wyłączone: włączenie dotyczy całej aplikacji, łącznie z panelem.
 - Aktualizacje (`article_updates`) bez `approved_by` nie trafiają na stronę.
+- Strona główna i strony kategorii (`app/(site)/page.tsx`, `app/(site)/[category]/page.tsx`) czytają listy z `lib/public/listings.ts` tym samym klientem, z tagiem `articles` (kategoria dodatkowo `category:<slug>`). Nagłówek i stopka z nawigacją po kategoriach są w `app/(site)/layout.tsx`, więc panel ich nie dostaje. Lista kategorii domyślnej obejmuje też artykuły bez kategorii. Build nie ma bazy: w `next build` nieosiągalna baza daje pustą listę strony głównej i nawigacji (inne błędy zapytań nadal przerywają build), a dane dociąga pierwsza rewalidacja.
 
 ### 3.9 Platform
 
