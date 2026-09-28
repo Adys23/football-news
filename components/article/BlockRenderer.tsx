@@ -2,25 +2,33 @@ import type { ReactNode } from "react";
 import type { ArticleBlock } from "@contracts/index.ts";
 
 /**
- * Zamkniety zbior typow blokow z articleContentSchema. Panel i (w etapie 4)
- * strona publiczna renderuja tresc tylko stad, nigdy z HTML.
+ * "review" (panel) pokazuje wszystko, takze braki: fakt bez tresci i miejsce na zdjecie.
+ * "public" pomija to, czego czytelnik nie powinien ogladac jako usterki.
+ */
+export type BlockRendererVariant = "review" | "public";
+
+/**
+ * Zamkniety zbior typow blokow z articleContentSchema. Panel i strona publiczna
+ * renderuja tresc tylko stad, nigdy z HTML.
  */
 export function BlockRenderer({
   blocks,
   factStatements,
   renderAfter,
+  variant = "review",
 }: {
   blocks: readonly ArticleBlock[];
   /** id faktu -> zdanie, dla blokow fact_box. */
   factStatements: ReadonlyMap<string, string>;
   /** Dodatek pod blokiem, np. uwagi QA w panelu. */
   renderAfter?: (index: number) => ReactNode;
+  variant?: BlockRendererVariant;
 }) {
   return (
     <div className="space-y-4">
       {blocks.map((block, index) => (
-        <div key={index}>
-          <Block block={block} factStatements={factStatements} />
+        <div key={index} className="empty:hidden">
+          <Block block={block} factStatements={factStatements} variant={variant} />
           {renderAfter?.(index)}
         </div>
       ))}
@@ -31,9 +39,11 @@ export function BlockRenderer({
 function Block({
   block,
   factStatements,
+  variant,
 }: {
   block: ArticleBlock;
   factStatements: ReadonlyMap<string, string>;
+  variant: BlockRendererVariant;
 }) {
   switch (block.type) {
     case "paragraph":
@@ -57,6 +67,9 @@ function Block({
       );
     case "image":
       // Obrazy z image_assets wejda w etapie 4; do tego czasu tylko miejsce i podpis.
+      if (variant === "public") {
+        return null;
+      }
       return (
         <figure className="rounded-md border border-dashed border-neutral-300 p-4 text-sm text-neutral-600">
           <p>Zdjęcie ({block.imageId})</p>
@@ -71,17 +84,24 @@ function Block({
         <ul className="list-disc space-y-1 pl-6">{items}</ul>
       );
     }
-    case "fact_box":
+    case "fact_box": {
+      const items = block.factIds.flatMap((factId, index) => {
+        const statement = factStatements.get(factId);
+        if (statement !== undefined) {
+          return [<li key={index}>{statement}</li>];
+        }
+        return variant === "public" ? [] : [<li key={index}>{`Brak faktu ${factId}`}</li>];
+      });
+      if (items.length === 0) {
+        return null;
+      }
       return (
         <aside className="rounded-md bg-neutral-100 p-4">
           <p className="font-semibold">{block.title ?? "Co wiemy"}</p>
-          <ul className="mt-2 list-disc space-y-1 pl-6 text-sm">
-            {block.factIds.map((factId, index) => (
-              <li key={index}>{factStatements.get(factId) ?? `Brak faktu ${factId}`}</li>
-            ))}
-          </ul>
+          <ul className="mt-2 list-disc space-y-1 pl-6 text-sm">{items}</ul>
         </aside>
       );
+    }
     default: {
       // Nowy typ bloku w kontrakcie ma wywrocic typecheck, a nie zniknac z podgladu.
       const unhandled: never = block;
