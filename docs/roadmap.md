@@ -71,7 +71,7 @@ Cel: redaktor może realnie pracować, a jego decyzje są mierzone.
 Zakres:
 
 - logowanie przez Supabase Auth, role `admin` / `editor` / `viewer`, `proxy.ts` na `/admin` i kontrola roli w `lib/auth/dal.ts`,
-- dashboard: nowe informacje, do weryfikacji, gotowe do publikacji, opublikowane dzisiaj, sekcja pilnych,
+- dashboard: nowe historie, do weryfikacji, gotowe do publikacji, opublikowane dzisiaj, sekcja pilnych,
 - widok recenzji: tytuł, lead, treść, lista źródeł z linkami, tabela faktów z `confidence`, scoring AI, konflikty,
 - edytor bloków z walidacją schematu,
 - akcje Odrzuć / Edytuj / Publikuj z zapisem do `audit_log` i `article_revisions`,

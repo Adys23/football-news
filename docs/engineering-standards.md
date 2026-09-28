@@ -194,7 +194,7 @@ flowchart TD
 
 ### 4.3 Baza danych - job `db`
 
-- `supabase/setup-cli` w przypiętej wersji (zgodnej z lokalnym CLI, bo od niej zależy format `database.types.ts`), `supabase start`, `supabase db reset` na migracjach i seedzie.
+- Supabase CLI z `devDependencies` (`node_modules/.bin` w `PATH`), więc CI, lokalny komputer i sesje w chmurze używają tej samej wersji, a od niej zależy `database.types.ts`. Wersję podnosi Dependabot w `package.json`; PR z podbiciem musi zawierać przebudowane typy (`npm run db:types`). Potem `supabase start`, `supabase db reset` na migracjach i seedzie.
 - `supabase db lint` - błędy blokują.
 - Regeneracja `database.types.ts` i `git diff --exit-code` - niezsynchronizowane typy blokują.
 - Testy RLS w SQL: dla każdej tabeli publicznej sprawdzenie, że rola `anon` widzi tylko to, co powinna (w szczególności: brak dostępu do `sources`, `source_items`, `stories`, `facts`, `jobs`, `llm_calls` oraz do artykułów innych niż `published`).

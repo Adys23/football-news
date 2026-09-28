@@ -143,9 +143,50 @@ Przed pokazaniem redaktorowi artykuł przechodzi automatyczną ocenę: zgodnoś�
 
 Panel `/admin`: dashboard z licznikami, kolejka do weryfikacji sortowana po `importance` i `confidence`, widok artykułu ze źródłami, faktami i scoringiem oraz akcjami Odrzuć / Edytuj / Publikuj. Każda akcja trafia do `audit_log`, każda edycja treści do `article_revisions` - to później pozwala policzyć, jak często redaktor musi poprawiać AI.
 
+Dashboard (`app/admin/page.tsx`, dane w `lib/admin/dashboard-data.ts`) czyta wyłącznie na sesji redaktora, przez RLS:
+
+- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), gotowe do publikacji (`approved`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
+- kolejka do weryfikacji: artykuły `review` posortowane po `stories.importance`, potem `story_assessments.confidence`, a przy remisie wyżej ten, który dłużej czeka. Po wadze sortuje już baza, przed limitem 200 pozycji; po pewności z zagnieżdżonej oceny PostgREST sortować nie umie, więc robi to kod. Gdy kolejka jest dłuższa niż limit, panel pokazuje „Pokazano X z Y”,
+- sekcja „Pilne”: historie z `importance >= 80` w statusach od `new` do `approved`, aktualizowane w ciągu doby. Próg to `HIGH_IMPORTANCE` z `_shared/lib/taxonomy.ts` (ten sam eskaluje model), a nie wpis w `settings`, bo `settings` jest widoczne tylko dla admina.
+
+Widok recenzji (`app/admin/artykuly/[id]/page.tsx`, dane w `lib/admin/review-data.ts`, logika w `lib/admin/review.ts`) czyta na sesji redaktora:
+
+- treść renderuje `components/article/BlockRenderer.tsx` po walidacji `articleContentSchema`; treść spoza schematu daje ostrzeżenie z listą błędów zamiast strony błędu, a uwagi `article_scores.issues` z polem `block` są pokazywane pod właściwym blokiem,
+- `unsupported_claims > 0` daje baner „Publikacja zablokowana” - ten sam warunek, co w `enforce_publish_guard`,
+- fakty są łączone przez `groupFacts`, tak jak widziała je walidacja; fakt jest zatwierdzony, gdy którykolwiek wiersz grupy jest w `approved_fact_ids`. Brak oceny albo ocena wskazująca fakty sprzed ponownej ekstrakcji (ten sam warunek, co w `loadApprovedFacts`) daje „bez oceny”, nie „odrzucony”,
+- `story_assessments.conflicts` zapisuje numery materiałów (`source_indexes`) z wejścia `VALIDATE_FACTS`. Panel odtwarza tę numerację przez `buildExtractionInput`, więc pokazuje nazwy źródeł. Gdy któryś `story_sources.created_at` jest późniejszy niż `story_assessments.updated_at`, numeracja mogła się przesunąć: panel pokazuje wtedy same numery z ostrzeżeniem. Zmiany `trust_score` źródła po ocenie ten warunek nie wykrywa - dokładne rozwiązanie to zapis id źródeł w konfliktach przez `VALIDATE_FACTS`,
+- limity pól SEO pochodzą z `seoOutputSchema`; wartość spoza zakresu jest wyróżniona,
+- linki do materiałów źródłowych tylko dla adresów `http(s)`.
+
+Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `saveArticleMeta`) oraz treści (`components/admin/BlockEditor.tsx`, server action `saveArticleContent`, obie w `app/admin/artykuly/[id]/actions.ts`) jest dostępna tylko dla artykułów `review`:
+
+- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty i listy; w ramce z faktami zmienia tylko tytuł. Zdjęcie można tylko zachować albo usunąć, a nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów (`editRuleIssues`), bo kontrola kopiowania pomija cytaty,
+- treść waliduje `articleContentSchema` z komunikatami po polsku: w edytorze informacyjnie, w server action jako warunek zapisu,
+
+- przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
+- zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,
+- gdy ostatnia rewizja redaktora jest późniejsza niż `article_scores.checked_at`, sekcja „Ocena AI” pokazuje, że ocena dotyczy wersji sprzed edycji. Ponowna ocena po edycji to osobna zmiana pipeline'u.
+
+Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika w `lib/admin/ops.ts`) jest tylko dla admina, zgodnie z polityką `jobs_admin_select`:
+
+- lista jobów `dead` i `failed` (martwe pierwsze, limit 100) z typem, liczbą prób, początkiem błędu i linkiem do artykułu albo listy historii. `jobs` nie ma `updated_at`, więc martwy job pokazuje `processed_at` ustawiane przez `fail_job`, a `failed` termin kolejnej próby (`next_run_at`),
+- „Ponów” to server action: `requireRole('admin')`, walidacja id zodem, RPC `requeue_dead_job` na sesji admina (bez `service_role`), potem `revalidatePath('/admin/joby')`. Rolę sprawdza też sama funkcja w bazie.
+
+Dashboard pokazuje adminowi alert z liczbą martwych jobów i linkiem do `/admin/joby`.
+
+Widok zdrowia źródeł (`app/admin/zrodla/page.tsx`, te same pliki `lib/admin/ops*`) czyta każdy redaktor (`sources_editor_select`):
+
+- stan wyliczany z `active` i `consecutive_failures` wobec `SOURCE_FAILURE_LIMIT` z `_shared/lib/circuit-breaker.ts` (ten sam próg co w `fetch-source`); źródła z problemami na górze,
+- ostatni błąd pobierania (najnowszy `jobs.error` dla `FETCH_SOURCE` danego źródła) tylko dla admina, bo `jobs` jest w RLS tylko dla admina,
+- przełącznik `active` tylko dla admina: server action z `requireRole('admin')` i zodem, `update sources` na sesji (`sources_admin_write`) z warunkiem na poprzedni stan, więc nieaktualny formularz nic nie zmienia. Włączenie zeruje w tym samym zapisie `consecutive_failures`, a trigger `sources_audit_change` zapisuje jedną zmianę `source_change`.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
+
+- Artykuł ma adres `/<slug kategorii>/<slug>` (jedna trasa `app/(site)/[category]/[slug]`); artykuł bez kategorii trafia pod `pilka-nozna`, a zła kategoria w adresie daje 308 na adres kanoniczny.
+- Dane publiczne czyta `lib/public/queries.ts` klientem anon bez ciasteczek (sesja redaktora nie wpuści szkicu do cache), z filtrem `status = 'published'` ponad RLS. Zapytania idą do Data Cache Next.js z tagami z `lib/public/cache-tags.ts` i `revalidate = 60` jako siatką bezpieczeństwa do czasu webhooka publikacji. `cacheComponents` jest wyłączone: włączenie dotyczy całej aplikacji, łącznie z panelem.
+- Aktualizacje (`article_updates`) bez `approved_by` nie trafiają na stronę.
 
 ### 3.9 Platform
 
