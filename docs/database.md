@@ -459,7 +459,7 @@ returns setof jobs as $$
 $$ language sql;
 ```
 
-Pozostałe: `enqueue_job(p_type, p_payload, p_priority, p_dedupe_key)`, `complete_job(p_id)`, `fail_job(p_id, p_error)` z backoffem `30s * 2^attempts` i przejściem do `dead` po `max_attempts`, `requeue_stale_jobs()` dla jobów w `running` dłużej niż 15 minut, `defer_job(p_id, p_delay, p_reason)` (tylko `service_role`) - odkłada job w `running` z powrotem do `queued` bez zużycia próby; worker woła ją, gdy handler rzuci `DeferJobError` (np. limit `max_articles_per_hour`).
+Pozostałe: `enqueue_job(p_type, p_payload, p_priority, p_dedupe_key)`, `complete_job(p_id)`, `fail_job(p_id, p_error)` z backoffem `30s * 2^attempts` i przejściem do `dead` po `max_attempts`, `requeue_stale_jobs()` dla jobów w `running` dłużej niż 15 minut, `defer_job(p_id, p_delay, p_reason)` (tylko `service_role`) - odkłada job w `running` z powrotem do `queued` bez zużycia próby; worker woła ją, gdy handler rzuci `DeferJobError` (np. limit `max_articles_per_hour`). `requeue_dead_job(p_job_id)` ponawia pojedynczy job `dead` z panelu - `security definer`, sprawdza `is_admin()` i dla innych ról rzuca `42501`. Masowe `requeue_dead_jobs(p_type)` jest tylko dla `service_role`.
 
 ### 8.3 `llm_calls`
 
@@ -470,6 +470,12 @@ Pozwala odpowiedzieć na pytanie "ile kosztował ten artykuł" i "który etap pr
 ### 8.4 `audit_log`
 
 `id`, `actor_id` (FK -> `profiles`), `action` (`approve`, `reject`, `edit`, `publish`, `unpublish`, `source_change`), `entity_type`, `entity_id`, `diff jsonb`, `created_at`.
+
+Tabelę wypełniają wyłącznie triggery `security definer` - nie ma polityki `insert`, więc sesja redaktora nie dopisze ani nie podrobi wpisu:
+
+- zmiana `articles.status` -> `publish`, `approve`, `reject`, `archive` albo `edit`; aktor to `auth.uid()`, a dla zmian z pipeline'u (bez sesji) - `approved_by`;
+- rewizja redaktora w `article_revisions` (`edited_by` wypełnione) -> `edit` z `diff.revision_id`; rewizje modelu pomijamy;
+- zmiana `sources.active`, `trust_score` lub `rss_url` -> `source_change` z polami `{from, to}`; `actor_id` jest `null`, gdy źródło wyłączył circuit breaker.
 
 ### 8.5 `settings`
 
@@ -495,7 +501,7 @@ Polityki - zasada domyślna to "brak dostępu", uprawnienia dodawane wybiórczo:
 | `stories`, `facts`, `story_assessments`, `story_sources`               | brak                                                               | `select`                                  | pełny        |
 | `sources`, `source_items`                                              | brak                                                               | `select`; `update` tylko admin            | pełny        |
 | `jobs`, `llm_calls`, `settings`                                        | brak                                                               | `select` (admin)                          | pełny        |
-| `audit_log`                                                            | brak                                                               | `select` (admin), `insert` przez trigger  | pełny        |
+| `audit_log`                                                            | brak                                                               | `select` (admin), `insert` tylko triggery | pełny        |
 | `transfers`                                                            | `select` gdy `status = 'official'`                                 | `select`                                  | pełny        |
 
 Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel redaktora działa na sesji użytkownika i może zmienić tylko to, co jest mu potrzebne do recenzji.
@@ -524,6 +530,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0016_ingestion_helpers.sql`  | `list_due_sources()`, `find_similar_stories()`                                                                                    |
 | `0017_link_source_item.sql`   | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                          |
 | `0018_pipeline_hardening.sql` | `defer_job()`, unikalność `facts` po `source_item_id`, pełny indeks `jobs.dedupe_key`, progi oceny w `settings`                   |
+| `0019_editor_audit.sql`       | audyt z sesji redaktora (`security definer`), triggery `edit` i `source_change`, `requeue_dead_job()` dla admina                  |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
@@ -532,7 +539,7 @@ Dwie rzeczy, o które łatwo się potknąć przy zmianach w `0015`:
 - Tabela `cron.job` należy do roli `supabase_admin`, a migracje wykonuje `postgres`. `update cron.job` kończy się błędem `permission denied for table job` - do włączania i wyłączania harmonogramów służy `cron.alter_job`.
 - Harmonogramy zakładamy nieaktywne. Włączenie ich to świadoma decyzja dla stagingu i produkcji, po ustawieniu sekretów w Vault.
 
-`seed.sql`: 11 źródeł startowych (oficjalne kanały klubów i lig, jeden uznany dziennikarz, duże serwisy, jeden agregator), kategorie `transfery`, `pilka-nozna` i `ekstraklasa`, ligi, kluby z aliasami i zawodnicy dla testów rozpoznawania encji, konto redakcyjne dla środowiska lokalnego (`redaktor@local.test`).
+`seed.sql`: 11 źródeł startowych (oficjalne kanały klubów i lig, jeden uznany dziennikarz, duże serwisy, jeden agregator), kategorie `transfery`, `pilka-nozna` i `ekstraklasa`, ligi, kluby z aliasami i zawodnicy dla testów rozpoznawania encji, konta dla środowiska lokalnego: `redaktor@local.test` (admin), `edytor@local.test` (editor) i `czytelnik@local.test` (viewer).
 
 Źródła, których adresu feedu nie potwierdziliśmy, są w seedzie oznaczone jako nieaktywne. Martwy feed to fałszywe alarmy w circuit breakerze, więc adresów nie zgadujemy - weryfikujemy je przed włączeniem.
 
