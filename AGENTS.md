@@ -47,11 +47,13 @@ npm run verify:all         # to samo, co robi CI
 supabase start             # lokalny stack (Docker)
 supabase db reset          # ponowne odtworzenie bazy z migracji + seed
 supabase migration new <nazwa>
-supabase gen types typescript --local > supabase/functions/_shared/contracts/database.types.ts
+npm run db:types           # regeneracja database.types.ts (CLI z package.json + prettier)
 supabase functions serve process-jobs --env-file supabase/.env.local
 ```
 
 Po każdej zmianie schematu: nowa migracja, `supabase db reset`, regeneracja typów. W tej kolejności.
+
+Supabase CLI jest w `devDependencies`. Skrypty npm i `scripts/*.mjs` zawsze biorą tę wersję; w terminalu używaj `npx supabase ...`, a nie globalnej instalacji w innej wersji.
 
 ---
 

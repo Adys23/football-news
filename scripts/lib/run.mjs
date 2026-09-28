@@ -1,4 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { delimiter } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Binarki z node_modules maja pierwszenstwo przed globalnymi, zeby `supabase` zawsze bylo
+// wersja przypieta w package.json. Inna wersja CLI generuje inne database.types.ts.
+const LOCAL_BIN = fileURLToPath(new URL("../../node_modules/.bin", import.meta.url));
 
 /**
  * Uruchamia komende przez powloke. Argumenty sklejamy w jeden ciag, bo mieszanie
@@ -13,6 +19,7 @@ export function run(command, args = [], options = {}) {
     stdio: stdio ?? (capture ? ["ignore", "pipe", "inherit"] : "inherit"),
     shell: true,
     encoding: "utf8",
+    env: { ...process.env, PATH: `${LOCAL_BIN}${delimiter}${process.env.PATH ?? ""}` },
     ...rest,
   });
 

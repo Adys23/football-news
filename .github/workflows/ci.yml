@@ -70,11 +70,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - uses: supabase/setup-cli@v1
-        with:
-          # Przypiete: generator typow zmienia format miedzy wersjami, a bramka
-          # porownuje database.types.ts bajt po bajcie. Podnosimy razem z regeneracja typow.
-          version: 2.117.0
+      # Supabase CLI z devDependencies: ta sama wersja lokalnie, w chmurze i w CI.
+      # Generator typow zmienia wyjscie miedzy wersjami, a bramka porownuje
+      # database.types.ts bajt po bajcie. Wersje podnosimy tylko w package.json.
+      - name: Supabase CLI z package.json
+        run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       # supabase start zaklada baze, wykonuje migracje i seed.
       - name: Start lokalnego stacku
