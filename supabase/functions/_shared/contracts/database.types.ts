@@ -1430,6 +1430,23 @@ export type Database = {
         }
       }
       normalize_title: { Args: { p_title: string }; Returns: string }
+      public_article_facts: {
+        Args: { p_article_id: string }
+        Returns: {
+          id: string
+          statement_pl: string
+        }[]
+      }
+      public_article_sources: {
+        Args: { p_article_id: string }
+        Returns: {
+          published_at: string
+          source_name: string
+          source_type: Database["public"]["Enums"]["source_type"]
+          title: string
+          url: string
+        }[]
+      }
       requeue_dead_job: { Args: { p_job_id: string }; Returns: boolean }
       requeue_dead_jobs: {
         Args: { p_type?: Database["public"]["Enums"]["job_type"] }
