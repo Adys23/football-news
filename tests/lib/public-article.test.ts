@@ -11,11 +11,15 @@ function row(overrides: Partial<PublishedArticleRow> = {}): PublishedArticleRow 
     title: "Bruno Fernandes przedłuża kontrakt z Manchesterem United",
     lead: "Klub potwierdził nową umowę.",
     content: { version: 1, blocks: [{ type: "paragraph", text: "Treść." }] },
+    seo_title: null,
+    seo_description: null,
     published_at: "2026-09-28T10:00:00Z",
+    updated_at: "2026-09-28T10:00:00Z",
     ai_generated: true,
     categories: { name: "Transfery", slug: "transfery" },
     authors: { name: "Redaktor", slug: "redaktor", role_title: null },
     article_updates: [],
+    hero_image: null,
     ...overrides,
   };
 }
@@ -42,6 +46,15 @@ describe("toPublicArticle", () => {
     );
 
     expect(article.updates.map((update) => update.id)).toEqual(["u2", "u1"]);
+  });
+
+  it("keeps a hero image only when it has a license", () => {
+    const image = { url: "https://cdn.example/a.jpg", width: 1600, height: 900, alt: "Stadion" };
+
+    expect(
+      toPublicArticle(row({ hero_image: { ...image, license: "CC BY 4.0" } })).heroImage,
+    ).toEqual(image);
+    expect(toPublicArticle(row({ hero_image: { ...image, license: "  " } })).heroImage).toBeNull();
   });
 
   it("throws on content that does not match the block schema", () => {
