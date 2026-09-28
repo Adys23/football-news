@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(24);
+select plan(28);
 
 insert into stories (id, title, status)
 values
@@ -16,7 +16,8 @@ values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa93', 'Historia bez leadu', 'review'),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa94', 'Historia z twierdzeniami bez podparcia', 'review'),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa95', 'Historia odrzucana bez powodu', 'review'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa96', 'Historia publikowana przez admina', 'review');
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa96', 'Historia publikowana przez admina', 'review'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa97', 'Historia edytowana po ocenie', 'review');
 
 insert into articles (id, story_id, title, slug, lead, content, status, category_id, updated_at)
 select
@@ -29,12 +30,23 @@ select
   'review',
   '33333333-3333-4333-8333-333333333331',
   '2026-01-01 10:00:00+00'
-from generate_series(1, 6) as n;
+from generate_series(1, 7) as n;
 
-insert into article_scores (article_id, unsupported_claims)
+insert into article_scores (article_id, unsupported_claims, checked_at)
 values
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb91', 0),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb94', 2);
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb91', 0, '2026-01-01 09:00:00+00'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb94', 2, '2026-01-01 09:00:00+00'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb97', 0, '2026-01-01 09:00:00+00');
+
+-- Po ocenie z 09:00: artykul 1 ma tylko rewizje modelu (edited_by null, nie liczy sie),
+-- artykul 7 edycje redaktora, wiec jego ocena jest nieaktualna.
+insert into article_revisions (article_id, title, lead, content, edited_by, created_at)
+values
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb91', 'Artykul testowy 1', 'Lead artykulu.',
+   '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit."}]}', null, '2026-01-01 09:30:00+00'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb97', 'Artykul testowy 7', 'Lead artykulu.',
+   '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit."}]}',
+   '11111111-1111-4111-8111-111111111112', '2026-01-01 09:30:00+00');
 
 -- === Sesja redaktora (editor, bez profilu autora) ===
 
@@ -229,6 +241,38 @@ select is(
   'artykul bez autora dostaje profil autora publikujacego'
 );
 
+-- === Ocena sprzed edycji redaktora (sesja redaktora) ===
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub": "11111111-1111-4111-8111-111111111112", "role": "authenticated"}', true);
+
+select throws_ok(
+  $$ select publish_article('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb97', '2026-01-01 10:00:00+00') $$,
+  '22023',
+  null,
+  'ocena sprzed edycji redaktora blokuje publikacje bez potwierdzenia'
+);
+
+select lives_ok(
+  $$ select publish_article('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb97', '2026-01-01 10:00:00+00', true) $$,
+  'publikacja z potwierdzeniem przy ocenie sprzed edycji'
+);
+
+reset role;
+
+select is(
+  (select diff ->> 'reason' from audit_log
+   where entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb97' and action = 'publish'),
+  'Publikacja z ocena automatyczna sprzed edycji redaktora',
+  'audit_log zapisuje, ze publikacja byla przy nieaktualnej ocenie'
+);
+
+select is(
+  current_setting('app.status_change_reason', true),
+  '',
+  'powod publikacji nie zostaje w ustawieniu transakcyjnym'
+);
+
 -- === Sesja czytelnika (viewer) ===
 
 set local role authenticated;
@@ -251,7 +295,7 @@ select throws_ok(
 reset role;
 
 select ok(
-  not has_function_privilege('anon', 'publish_article(uuid, timestamptz)', 'execute')
+  not has_function_privilege('anon', 'publish_article(uuid, timestamptz, boolean)', 'execute')
     and not has_function_privilege('anon', 'reject_article(uuid, timestamptz, text)', 'execute')
     and not has_function_privilege('anon', 'lock_article_for_decision(uuid, timestamptz)', 'execute'),
   'anon nie ma execute na funkcjach decyzji'

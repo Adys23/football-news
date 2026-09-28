@@ -19,6 +19,7 @@
 /.github/                           @OWNER
 /.husky/                            @OWNER
 /.cursor/                           @OWNER
+/.claude/                           @OWNER
 /scripts/                           @OWNER
 
 # Dokumentacja architektury jest źródłem prawdy dla agentów
