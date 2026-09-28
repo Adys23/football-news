@@ -86,6 +86,24 @@ insert into auth.users (
   )
 on conflict (id) do nothing;
 
+-- GoTrue czyta kolumny tokenow jako string i przy NULL logowanie konczy sie bledem 500
+-- ("converting NULL to string"). Konta zakladane przez API maja tu pusty tekst.
+update auth.users
+set
+  confirmation_token = coalesce(confirmation_token, ''),
+  recovery_token = coalesce(recovery_token, ''),
+  email_change = coalesce(email_change, ''),
+  email_change_token_new = coalesce(email_change_token_new, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  phone_change = coalesce(phone_change, ''),
+  phone_change_token = coalesce(phone_change_token, ''),
+  reauthentication_token = coalesce(reauthentication_token, '')
+where id in (
+  '11111111-1111-4111-8111-111111111111',
+  '11111111-1111-4111-8111-111111111112',
+  '11111111-1111-4111-8111-111111111113'
+);
+
 insert into auth.identities (
   user_id,
   identity_data,
