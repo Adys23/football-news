@@ -162,6 +162,7 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
             articleId={article.id}
             updatedAt={article.updatedAt}
             blockers={blockers}
+            scoresStale={scoresStale}
           />
         ) : (
           <p className="mt-2 text-sm text-neutral-600">
