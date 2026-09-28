@@ -229,10 +229,10 @@ Jedno repozytorium, jedna aplikacja Next.js w katalogu głównym, cały backend 
 │  │  ├─ artykuly/[id]/page.tsx    # widok review
 │  │  └─ zrodla/page.tsx           # zarządzanie źródłami
 │  ├─ api/
-│  │  ├─ revalidate/route.ts       # webhook z Supabase po publikacji
-│  │  └─ feed/route.ts             # RSS portalu
-│  ├─ sitemap.ts
-│  ├─ sitemap-news/route.ts
+│  │  └─ revalidate/route.ts       # webhook z Supabase po publikacji
+│  ├─ feed.xml/route.ts            # RSS portalu (poza /api, bo robots.txt blokuje /api)
+│  ├─ sitemap.xml/route.ts         # sitemapa całości
+│  ├─ sitemap-news.xml/route.ts    # Google News, ostatnie 48 h
 │  └─ robots.ts
 ├─ components/
 │  ├─ ui/                          # shadcn/ui
@@ -344,13 +344,13 @@ Aktualizacja istniejącej historii nie tworzy nowego artykułu. Dopisuje wpis do
 
 Strategia renderowania:
 
-| Trasa                                | Strategia                                       |
-| ------------------------------------ | ----------------------------------------------- |
-| `/` i strony kategorii               | Render przy żądaniu (nie w buildzie), tagi+60 s |
-| `/transfery/[slug]`                  | ISR generowane na żądanie, unieważniane tagiem  |
-| `/zawodnicy/[slug]`, `/kluby/[slug]` | ISR, `revalidate = 3600`                        |
-| `/admin/**`                          | Dynamiczne, `no-store`, wymuszony login         |
-| `sitemap.ts`, `feed`                 | ISR, unieważniane tagiem `sitemap`              |
+| Trasa                                | Strategia                                                            |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| `/` i strony kategorii               | Render przy żądaniu (nie w buildzie), tagi+60 s                      |
+| `/transfery/[slug]`                  | ISR generowane na żądanie, unieważniane tagiem                       |
+| `/zawodnicy/[slug]`, `/kluby/[slug]` | ISR, `revalidate = 3600`                                             |
+| `/admin/**`                          | Dynamiczne, `no-store`, wymuszony login                              |
+| `/sitemap*.xml`, `/feed.xml`         | Render przy żądaniu, cache danych tagami `sitemap`/`articles` + 60 s |
 
 ---
 
@@ -369,11 +369,13 @@ Strategia renderowania:
 ### 8.2 Na poziomie serwisu
 
 - `sitemap.xml` dla całości plus osobny `sitemap-news.xml` ograniczony do artykułów z ostatnich 48 godzin.
-- `robots.txt` z blokadą `/admin` i `/api`.
-- Feed RSS portalu.
+- `robots.txt` z blokadą `/admin`, `/login`, `/brak-dostepu` i `/api` oraz adresami obu sitemap.
+- Feed RSS portalu pod `/feed.xml`, wskazany w `<head>` stron publicznych (`<link rel="alternate">`).
 - Strony autorów, strona zasad redakcyjnych, strona kontaktowa i informacja o wydawcy.
 - Linkowanie wewnętrzne budowane automatycznie z `article_entities` - artykuł linkuje do profili zawodnika, klubu i ligi, a profile linkują do najnowszych artykułów.
 - Budżety wydajności: LCP poniżej 2,0 s na mobile, CLS poniżej 0,1, brak obrazów bez wymiarów, fonty lokalne.
+
+Sitemapy i feed to route handlery z buildera `lib/public/xml-feeds.ts` (escape XML, namespace `news:` i `atom:`), a nie `sitemap.ts`: metadata route nie obsługuje Google News i nie escapuje adresów. Każdy woła `connection()`, więc nie powstaje w buildzie; zapytania (`lib/public/sitemap-data.ts`, `lib/public/profiles.ts`) idą przez `lib/public/client.ts` z tagami `articles` i `sitemap`. `sitemap.xml` zawiera stronę główną, strony stałe, kategorie, artykuły z `lastmod` (późniejsza z dat publikacji i zmiany) oraz profile i autorów z co najmniej jednym opublikowanym artykułem; limit 50 000 adresów (nadmiar odpada od profili), zapytania stronicowane po 1000 wierszy (`max_rows`). `sitemap-news.xml` ma najwyżej 1000 adresów; zapytanie sięga od pełnej godziny, żeby klucz cache zmieniał się raz na godzinę, a dokładne okno 48 h liczy kod.
 
 ### 8.3 Granica, której nie przekraczamy
 

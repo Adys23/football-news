@@ -73,3 +73,12 @@ export const ABOUT_PATH = "/o-nas";
 
 /** Zasady redakcyjne (docs/architecture.md §4). */
 export const EDITORIAL_POLICY_PATH = "/o-nas/zasady-redakcyjne";
+
+/** Sitemapa calego serwisu. */
+export const SITEMAP_PATH = "/sitemap.xml";
+
+/** Sitemapa Google News: artykuly z ostatnich 48 godzin. */
+export const NEWS_SITEMAP_PATH = "/sitemap-news.xml";
+
+/** Feed RSS portalu. Poza /api, bo robots.txt blokuje /api. */
+export const FEED_PATH = "/feed.xml";

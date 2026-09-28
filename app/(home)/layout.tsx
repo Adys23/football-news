@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { connection } from "next/server";
+import { FeedLink } from "@/components/public/FeedLink";
 import { SiteShell } from "@/components/public/SiteShell";
 
 /**
@@ -10,5 +11,10 @@ import { SiteShell } from "@/components/public/SiteShell";
  */
 export default async function HomeLayout({ children }: { children: ReactNode }) {
   await connection();
-  return <SiteShell>{children}</SiteShell>;
+  return (
+    <>
+      <FeedLink />
+      <SiteShell>{children}</SiteShell>
+    </>
+  );
 }

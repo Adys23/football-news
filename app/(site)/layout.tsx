@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FeedLink } from "@/components/public/FeedLink";
 import { SiteShell } from "@/components/public/SiteShell";
 
 /**
@@ -8,5 +9,10 @@ import { SiteShell } from "@/components/public/SiteShell";
  * w buildzie (artykul i kategoria powstaja przy pierwszej wizycie).
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
-  return <SiteShell>{children}</SiteShell>;
+  return (
+    <>
+      <FeedLink />
+      <SiteShell>{children}</SiteShell>
+    </>
+  );
 }
