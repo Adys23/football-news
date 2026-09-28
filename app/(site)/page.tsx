@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { ArticleList } from "@/components/public/ArticleList";
 import { getLatestArticles } from "@/lib/public/listings";
 import { SITE } from "@/lib/site";
-
-// Musi byc literalem (analiza statyczna Next.js); ta sama wartosc co PUBLIC_REVALIDATE_SECONDS.
-export const revalidate = 60;
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
 export default async function HomePage() {
+  // Render na zadanie: build nie ma bazy. Cache zostaje na poziomie danych (lib/public/client.ts).
+  await connection();
   const articles = await getLatestArticles();
 
   return (

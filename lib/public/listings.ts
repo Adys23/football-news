@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cache } from "react";
-import { isProductionBuild, isUnreachableDatabaseError } from "@/lib/public/build-phase";
 import { CACHE_TAGS } from "@/lib/public/cache-tags";
 import {
   ARTICLE_CARD_COLUMNS,
@@ -19,25 +18,6 @@ import { isValidSlug } from "@/lib/public/paths";
 export const LISTING_LIMIT = 30;
 
 /**
- * Tylko w `next build` i tylko przy nieosiagalnej bazie pusty wynik zamiast bledu:
- * CI buduje bez bazy, a strona po rewalidacji (revalidate = 60) pobierze dane.
- * W runtime rzucamy, zeby ISR dalej serwowal ostatnia poprawna wersje.
- */
-function readFailed<T>(
-  what: string,
-  error: { code?: string; message: string },
-  buildFallback: T,
-): T {
-  if (isProductionBuild() && isUnreachableDatabaseError(error)) {
-    console.warn(
-      `Build bez dostepu do bazy (${what}): ${error.message}. Strona odswiezy sie po ISR.`,
-    );
-    return buildFallback;
-  }
-  throw new Error(`Nie udalo sie odczytac: ${what}: ${error.message}`);
-}
-
-/**
  * Najnowsze opublikowane artykuly. Filtr statusu dublujemy mimo RLS
  * (patrz lib/public/queries.ts).
  */
@@ -51,7 +31,7 @@ export async function getLatestArticles(limit: number = LISTING_LIMIT): Promise<
     .limit(limit);
 
   if (error) {
-    return readFailed("najnowsze artykuly", error, []);
+    throw new Error(`Nie udalo sie odczytac najnowszych artykulow: ${error.message}`);
   }
   return data.map(toArticleCard);
 }
@@ -67,7 +47,7 @@ export async function getNavigationCategories(): Promise<PublicCategory[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    return readFailed("kategorie", error, []);
+    throw new Error(`Nie udalo sie odczytac kategorii: ${error.message}`);
   }
   return data.map(toPublicCategory);
 }
