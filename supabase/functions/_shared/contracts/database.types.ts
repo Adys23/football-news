@@ -1436,6 +1436,16 @@ export type Database = {
         Returns: number
       }
       requeue_stale_jobs: { Args: { p_older_than?: string }; Returns: number }
+      save_article_edit: {
+        Args: {
+          p_article_id: string
+          p_content: Json
+          p_expected_updated_at: string
+          p_lead: string
+          p_title: string
+        }
+        Returns: string
+      }
       title_contains_label: {
         Args: { p_label: string; p_title: string }
         Returns: boolean
