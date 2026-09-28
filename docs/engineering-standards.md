@@ -144,6 +144,7 @@ Jedno odstępstwo od "zawsze wszystko", świadome i warte odnotowania: `verify:d
 | `test`          | `vitest run`                                                                          |
 | `test:db`       | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                    |
 | `test:pipeline` | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)   |
+| `perf:budget`   | LCP i CLS na emulowanym telefonie (sekcja 4.7); poza `verify:all` i CI                |
 | `deno:check`    | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime |
 | `deno:lint`     | `deno lint` w `supabase/functions/`                                                   |
 | `env:local`     | generuje `.env.local` z danych działającego lokalnego stacku                          |
@@ -232,6 +233,15 @@ Playwright na zbudowanej aplikacji, mały zestaw smoke:
 ### 4.7 Wydajność - job `lighthouse`
 
 Budżety z [architektury](architecture.md): LCP poniżej 2,0 s, CLS poniżej 0,1. Start jako ostrzeżenie, blokujący od etapu 4 roadmapy, gdy strona publiczna jest gotowa.
+
+Do czasu joba w CI budżety sprawdza lokalnie `npm run perf:budget` (`scripts/perf-budget.mjs`):
+
+1. Opublikuj co najmniej jeden artykuł (lokalna baza), potem `npm run build && npm run start`.
+2. `npm run perf:budget` otwiera stronę główną, kategorię i artykuł z pierwszego linku na stronie głównej (inne adresy: `-- --path=/ --path=/transfery`, inny serwer: `-- --base-url=...` albo `PERF_BASE_URL`, liczba pomiarów: `-- --runs=5`).
+3. Każdy pomiar idzie w świeżym kontekście przeglądarki (pusty cache) z profilem mobile jak w Lighthouse: ekran 412x823, CPU x4, sieć "Slow 4G" (RTT 562,5 ms, 1,47 Mb/s). Przed pomiarem skrypt raz pobiera stronę, żeby ISR miało ją w cache - mierzymy to, co dostaje czytelnik, nie pierwszy render na serwerze.
+4. LCP i CLS zbiera `PerformanceObserver`; CLS liczony oknami sesji jak w `web-vitals`. Wynik to mediana, kod wyjścia `1` przy przekroczeniu, `2` przy błędzie pomiaru (np. strona zwraca 404).
+
+Skrypt nie dodaje zależności: steruje Chromium przez Chrome DevTools Protocol na wbudowanym `WebSocket` z Node. Przeglądarkę wskazuje `CHROME_PATH`, a bez niej skrypt szuka Chromium pobranego przez Playwrighta (`PLAYWRIGHT_BROWSERS_PATH`, `/opt/pw-browsers`, `~/.cache/ms-playwright`). Wynik na lokalnej maszynie to sygnał, nie pomiar z terenu - różni się od danych CrUX.
 
 ### 4.8 Checki wymagane na `main`
 
