@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(18);
+select plan(20);
 
 select has_trigger('public', 'articles', 'articles_record_slug_redirect', 'trigger na articles');
 select function_privs_are(
@@ -116,6 +116,34 @@ select results_eq(
   'przejety slug wskazuje ostatniego wlasciciela'
 );
 
+-- 12a. Artykul 2 zajmuje slug, ktory przekierowywal do artykulu 1 (i go nie zwalnia):
+-- wpis znika, a adres nalezy do artykulu 2, nawet gdy ten nie jest opublikowany.
+update articles set slug = 'przekierowanie-1-c' where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd03';
+select is(
+  (select count(*) from article_redirects where old_slug = 'przekierowanie-1-c'),
+  0::bigint,
+  'slug zajety przez inny artykul nie przekierowuje do poprzedniego wlasciciela'
+);
+
+-- 12b. Nowy artykul z zajetym wczesniej slugiem tez przejmuje adres (trigger na insert).
+insert into stories (id, title, status)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaac09', 'Historia nowego artykulu', 'review');
+insert into articles (id, story_id, title, slug, lead, content, status)
+values (
+  'cccccccc-cccc-4ccc-8ccc-cccccccccc09',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaac09',
+  'Nowy artykul',
+  'przekierowanie-2',
+  'Lead artykulu.',
+  '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit."}]}',
+  'draft'
+);
+select is(
+  (select count(*) from article_redirects where old_slug = 'przekierowanie-2'),
+  0::bigint,
+  'nowy artykul z dawnym slugiem usuwa przekierowanie'
+);
+
 -- 13. Zarchiwizowany (z published_at) mogl byc zaindeksowany.
 update articles set slug = 'przekierowanie-4-nowy' where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd04';
 select is(
@@ -134,7 +162,7 @@ select is(
 -- 15-16. Anon czyta przekierowania (strona publiczna), ale nie moze ich zmieniac.
 set local role anon;
 select is(
-  (select count(*) from article_redirects where old_slug = 'przekierowanie-1-c'),
+  (select count(*) from article_redirects where old_slug = 'przekierowanie-1-b'),
   1::bigint,
   'anon widzi przekierowanie'
 );

@@ -18,14 +18,18 @@ security definer
 set search_path = ''
 as $$
 begin
-  if old.slug is not distinct from new.slug then
+  if tg_op = 'UPDATE' and old.slug is not distinct from new.slug then
     return null;
   end if;
 
-  -- Powrot do starego sluga: adres znow jest kanoniczny i nie moze przekierowywac.
+  -- Slug zajety przez artykul (powrot do starego sluga albo slug zwolniony wczesniej przez
+  -- inny artykul) jest znow adresem kanonicznym i nie moze przekierowywac gdzie indziej.
   delete from public.article_redirects
-  where old_slug = new.slug
-    and article_id = new.id;
+  where old_slug = new.slug;
+
+  if tg_op = 'INSERT' then
+    return null;
+  end if;
 
   -- Adresy szkicow nigdy nie byly publiczne. published_at zostaje po wycofaniu
   -- (archived), a zarchiwizowany adres mogl zostac zaindeksowany.
@@ -45,6 +49,6 @@ $$;
 revoke all on function record_article_slug_redirect() from public, anon, authenticated;
 
 create trigger articles_record_slug_redirect
-after update of slug on articles
+after insert or update of slug on articles
 for each row
 execute function record_article_slug_redirect();
