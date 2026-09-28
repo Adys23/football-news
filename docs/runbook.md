@@ -131,3 +131,15 @@ Kiedy: praca lokalna, CI, diagnoza handlera bez kosztów.
 3. Cały przepływ od RSS do artykułu w `review`: `npm run test:pipeline` (wymaga `supabase start`). Ostatnia linia `kontrola jakosci -> artykul w review, 7 wywolan LLM` oznacza, że każdy etap zadziałał.
 4. Job kończący się bez zmian z logiem `*.stale_*` jest nieaktualny: od ekstrakcji doszło źródło albo fakty zostały przeliczone. Nowa ekstrakcja zakolejkuje własny łańcuch - nie uruchamiaj starego ręcznie.
 5. Przed włączeniem prawdziwego modelu: `LLM_ENABLED=true`, `OPENAI_API_KEY` w `supabase/.env.local`, cennik modeli w `settings.model_prices` (bez niego `cost_usd = null`), `npm run llm:cost` po pierwszej historii.
+
+---
+
+## 12. Ponowienie martwego joba z panelu
+
+Kiedy: pojedynczy martwy job po usunięciu przyczyny (sekcja 2), bez dostępu do SQL.
+
+1. Zaloguj się jako admin i otwórz `/admin/joby`. Editor tej strony nie widzi, bo `jobs` ma politykę select tylko dla admina.
+2. Martwe joby są na górze, z typem, liczbą prób, chwilą przejścia do `dead` i początkiem błędu. Joby `failed` są tylko do podglądu - worker ponowi je sam po backoffie.
+3. „Ponów” woła `requeue_dead_job(id)`: status `queued`, `attempts = 0`, `error = null`. Funkcja sama sprawdza `is_admin()`, więc ręcznie wysłane żądanie editora też zostanie odrzucone.
+4. Po kliknięciu lista się odświeża i ponowiony job z niej znika. Jeśli ktoś ponowił go wcześniej, efekt jest ten sam - funkcja nic nie zmienia. Komunikat pojawia się tylko przy błędzie.
+5. Wielu martwych jobów tego samego typu nie ponawiaj po jednym z panelu. Najpierw diagnoza z sekcji 2, potem `requeue_dead_jobs()` z filtrem po typie.
