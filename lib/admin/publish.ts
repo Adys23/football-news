@@ -97,6 +97,13 @@ export const rejectInputSchema = decisionTargetSchema.extend({
     .transform((value) => value || null),
 });
 
+/** Pole formularza: redaktor potwierdza publikacje przy ocenie sprzed swojej edycji. */
+export const CONFIRM_STALE_SCORE_FIELD = "confirmStaleScore";
+
+const publishInputSchema = decisionTargetSchema.extend({
+  confirmStaleScore: z.boolean(),
+});
+
 export type DecisionState = { status: "error"; message: string; issues?: string[] } | undefined;
 
 const field = (formData: FormData, key: string) => {
@@ -105,9 +112,10 @@ const field = (formData: FormData, key: string) => {
 };
 
 export function parsePublishInput(formData: FormData) {
-  return decisionTargetSchema.safeParse({
+  return publishInputSchema.safeParse({
     articleId: field(formData, "articleId"),
     expectedUpdatedAt: field(formData, "expectedUpdatedAt"),
+    confirmStaleScore: formData.get(CONFIRM_STALE_SCORE_FIELD) === "on",
   });
 }
 
@@ -119,6 +127,9 @@ export function parseRejectInput(formData: FormData) {
   });
 }
 
+export const STALE_SCORE_CONFIRMATION_MESSAGE =
+  "Ocena automatyczna jest sprzed Twojej edycji. Potwierdź, że sprawdziłeś poprawiony tekst.";
+
 /** Kody bledow publish_article i reject_article (migracja 0021) na komunikaty dla redaktora. */
 const DECISION_ERROR_MESSAGES = new Map([
   ["40001", "Artykuł zmienił się po otwarciu widoku. Odśwież stronę i sprawdź aktualną wersję."],
@@ -126,6 +137,7 @@ const DECISION_ERROR_MESSAGES = new Map([
   ["P0002", "Artykuł nie istnieje."],
   ["42501", "Brak uprawnień do publikacji i odrzucania artykułów."],
   ["23502", "Artykuł nie ma leadu, kategorii albo treści."],
+  ["22023", STALE_SCORE_CONFIRMATION_MESSAGE],
   ["23514", "Baza zablokowała publikację: tekst zawiera twierdzenia bez podparcia w faktach."],
   ["22001", `Powód może mieć najwyżej ${MAX_REJECT_REASON_LENGTH} znaków.`],
 ]);

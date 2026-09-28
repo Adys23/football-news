@@ -1415,7 +1415,11 @@ export type Database = {
       };
       normalize_title: { Args: { p_title: string }; Returns: string };
       publish_article: {
-        Args: { p_article_id: string; p_expected_updated_at: string };
+        Args: {
+          p_article_id: string;
+          p_confirm_stale_score?: boolean;
+          p_expected_updated_at: string;
+        };
         Returns: string;
       };
       reject_article: {

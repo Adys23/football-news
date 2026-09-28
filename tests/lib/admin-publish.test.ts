@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_REJECT_REASON_LENGTH,
+  CONFIRM_STALE_SCORE_FIELD,
   decisionErrorMessage,
   parsePublishInput,
   parseRejectInput,
@@ -115,7 +116,19 @@ describe("parsePublishInput", () => {
     expect(parsed.success && parsed.data).toEqual({
       articleId: ARTICLE_ID,
       expectedUpdatedAt: UPDATED_AT,
+      confirmStaleScore: false,
     });
+  });
+
+  it("czyta potwierdzenie publikacji przy ocenie sprzed edycji", () => {
+    const parsed = parsePublishInput(
+      form({
+        articleId: ARTICLE_ID,
+        expectedUpdatedAt: UPDATED_AT,
+        [CONFIRM_STALE_SCORE_FIELD]: "on",
+      }),
+    );
+    expect(parsed.success && parsed.data.confirmStaleScore).toBe(true);
   });
 
   it("odrzuca formularz bez id albo wersji", () => {
@@ -151,7 +164,7 @@ describe("parseRejectInput", () => {
 
 describe("decisionErrorMessage", () => {
   it("tłumaczy kody z migracji 0021 i guarda publikacji", () => {
-    for (const code of ["40001", "55000", "P0002", "42501", "23502", "23514", "22001"]) {
+    for (const code of ["40001", "55000", "P0002", "42501", "23502", "22023", "23514", "22001"]) {
       expect(decisionErrorMessage(code)).toEqual(expect.any(String));
     }
   });

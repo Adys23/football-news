@@ -8,6 +8,7 @@ import {
   parseArticleContentEdit,
   parseArticleMetaEdit,
   saveErrorMessage,
+  scoresAreStale,
   type ArticleEditState,
 } from "@/lib/admin/article-edit";
 import { checkArticleEdit, getArticleForEdit } from "@/lib/admin/article-edit-data";
@@ -16,6 +17,7 @@ import {
   parsePublishInput,
   parseRejectInput,
   publishBlockers,
+  STALE_SCORE_CONFIRMATION_MESSAGE,
   type DecisionState,
 } from "@/lib/admin/publish";
 import { getArticleForReview } from "@/lib/admin/review-data";
@@ -131,7 +133,7 @@ export async function publishArticle(
   if (!parsed.success) {
     return INCOMPLETE_FORM;
   }
-  const { articleId, expectedUpdatedAt } = parsed.data;
+  const { articleId, expectedUpdatedAt, confirmStaleScore } = parsed.data;
 
   const article = await getArticleForReview(articleId);
   if (!article) {
@@ -145,10 +147,19 @@ export async function publishArticle(
     return { status: "error", message: "Artykuł nie jest gotowy do publikacji.", issues: blockers };
   }
 
+  if (
+    article.scores &&
+    scoresAreStale(article.scores.checkedAt, article.lastEditedAt) &&
+    !confirmStaleScore
+  ) {
+    return { status: "error", message: STALE_SCORE_CONFIRMATION_MESSAGE };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("publish_article", {
     p_article_id: articleId,
     p_expected_updated_at: expectedUpdatedAt,
+    p_confirm_stale_score: confirmStaleScore,
   });
   return finishDecision(articleId, "Publikacja", error);
 }
