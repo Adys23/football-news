@@ -143,6 +143,12 @@ Przed pokazaniem redaktorowi artykuł przechodzi automatyczną ocenę: zgodnoś�
 
 Panel `/admin`: dashboard z licznikami, kolejka do weryfikacji sortowana po `importance` i `confidence`, widok artykułu ze źródłami, faktami i scoringiem oraz akcjami Odrzuć / Edytuj / Publikuj. Każda akcja trafia do `audit_log`, każda edycja treści do `article_revisions` - to później pozwala policzyć, jak często redaktor musi poprawiać AI.
 
+Dashboard (`app/admin/page.tsx`, dane w `lib/admin/dashboard-data.ts`) czyta wyłącznie na sesji redaktora, przez RLS:
+
+- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), gotowe do publikacji (`approved`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
+- kolejka do weryfikacji: artykuły `review` posortowane po `stories.importance`, potem `story_assessments.confidence`, a przy remisie wyżej ten, który dłużej czeka. Po wadze sortuje już baza, przed limitem 200 pozycji; po pewności z zagnieżdżonej oceny PostgREST sortować nie umie, więc robi to kod. Gdy kolejka jest dłuższa niż limit, panel pokazuje „Pokazano X z Y”,
+- sekcja „Pilne”: historie z `importance >= 80` w statusach od `new` do `approved`, aktualizowane w ciągu doby. Próg to `HIGH_IMPORTANCE` z `_shared/lib/taxonomy.ts` (ten sam eskaluje model), a nie wpis w `settings`, bo `settings` jest widoczne tylko dla admina.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
