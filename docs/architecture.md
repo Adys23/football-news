@@ -149,6 +149,15 @@ Dashboard (`app/admin/page.tsx`, dane w `lib/admin/dashboard-data.ts`) czyta wy�
 - kolejka do weryfikacji: artykuły `review` posortowane po `stories.importance`, potem `story_assessments.confidence`, a przy remisie wyżej ten, który dłużej czeka. Po wadze sortuje już baza, przed limitem 200 pozycji; po pewności z zagnieżdżonej oceny PostgREST sortować nie umie, więc robi to kod. Gdy kolejka jest dłuższa niż limit, panel pokazuje „Pokazano X z Y”,
 - sekcja „Pilne”: historie z `importance >= 80` w statusach od `new` do `approved`, aktualizowane w ciągu doby. Próg to `HIGH_IMPORTANCE` z `_shared/lib/taxonomy.ts` (ten sam eskaluje model), a nie wpis w `settings`, bo `settings` jest widoczne tylko dla admina.
 
+Widok recenzji (`app/admin/artykuly/[id]/page.tsx`, dane w `lib/admin/review-data.ts`, logika w `lib/admin/review.ts`) też tylko czyta, na sesji redaktora:
+
+- treść renderuje `components/article/BlockRenderer.tsx` po walidacji `articleContentSchema`; treść spoza schematu daje ostrzeżenie z listą błędów zamiast strony błędu, a uwagi `article_scores.issues` z polem `block` są pokazywane pod właściwym blokiem,
+- `unsupported_claims > 0` daje baner „Publikacja zablokowana” - ten sam warunek, co w `enforce_publish_guard`,
+- fakty są łączone przez `groupFacts`, tak jak widziała je walidacja; fakt jest zatwierdzony, gdy którykolwiek wiersz grupy jest w `approved_fact_ids`. Brak oceny albo ocena wskazująca fakty sprzed ponownej ekstrakcji (ten sam warunek, co w `loadApprovedFacts`) daje „bez oceny”, nie „odrzucony”,
+- `story_assessments.conflicts` zapisuje numery materiałów (`source_indexes`) z wejścia `VALIDATE_FACTS`. Panel odtwarza tę numerację przez `buildExtractionInput`, więc pokazuje nazwy źródeł. Gdy któryś `story_sources.created_at` jest późniejszy niż `story_assessments.updated_at`, numeracja mogła się przesunąć: panel pokazuje wtedy same numery z ostrzeżeniem. Zmiany `trust_score` źródła po ocenie ten warunek nie wykrywa - dokładne rozwiązanie to zapis id źródeł w konfliktach przez `VALIDATE_FACTS`,
+- limity pól SEO pochodzą z `seoOutputSchema`; wartość spoza zakresu jest wyróżniona,
+- linki do materiałów źródłowych tylko dla adresów `http(s)`.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
