@@ -153,6 +153,17 @@ describe("applyAssessmentRules", () => {
     ).toBe("review");
   });
 
+  it("stosuje progi przekazane z settings zamiast domyslnych", () => {
+    const facts = [{ ...official, confidence: 0.75 }];
+    const loose = { minApprovedFactConfidence: 0.7, minSourceTrust: 0.8 };
+    const strict = { minApprovedFactConfidence: 0.8, minSourceTrust: 1.01 };
+
+    expect(applyAssessmentRules(base, facts, loose).assessment.publishability).toBe(
+      base.publishability,
+    );
+    expect(applyAssessmentRules(base, [official], strict).assessment.publishability).toBe("reject");
+  });
+
   it("nie podnosi reject modelu, nawet gdy progi sa spelnione", () => {
     const { assessment } = applyAssessmentRules({ ...base, publishability: "reject" }, [official]);
 

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  DeferJobError,
   JobError,
   claimJobs,
   completeJob,
+  deferJob,
   enqueueJob,
   failJob,
   requeueDeadJobs,
@@ -103,6 +105,26 @@ describe("claimJobs / completeJob / failJob", () => {
     });
   });
 
+  it("deferJob przekazuje opoznienie w sekundach, zaokraglone w gore", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const client = fakeClient(rpc);
+
+    await deferJob(client, JOB_ID, 90_500, "limit godzinowy");
+
+    expect(rpc).toHaveBeenCalledWith("defer_job", {
+      p_id: JOB_ID,
+      p_delay: "91 seconds",
+      p_reason: "limit godzinowy",
+    });
+  });
+
+  it("DeferJobError jest bledem joba z opoznieniem", () => {
+    const error = new DeferJobError("limit", 1_000);
+
+    expect(error).toBeInstanceOf(JobError);
+    expect(error.delayMs).toBe(1_000);
+  });
+
   it("requeueDeadJobs zwraca liczbe przywroconych zadan", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: 3, error: null });
     const client = fakeClient(rpc);
@@ -125,6 +147,7 @@ describe("claimJobs / completeJob / failJob", () => {
     await expect(claimJobs(client)).rejects.toThrow(/db down/);
     await expect(completeJob(client, JOB_ID)).rejects.toThrow(/db down/);
     await expect(failJob(client, JOB_ID, "x")).rejects.toThrow(/db down/);
+    await expect(deferJob(client, JOB_ID, 1_000, "x")).rejects.toThrow(/db down/);
     await expect(requeueDeadJobs(client)).rejects.toThrow(/db down/);
     await expect(requeueStaleJobs(client)).rejects.toThrow(/db down/);
   });

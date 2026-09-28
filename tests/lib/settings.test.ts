@@ -10,6 +10,8 @@ describe("parsePipelineSettings", () => {
       model_escalation: "gpt-5.6-sol",
       daily_llm_budget_usd: 15,
       min_fact_confidence: 0.6,
+      min_approved_fact_confidence: 0.8,
+      min_source_trust: 0.8,
       model_prices: {},
     });
   });

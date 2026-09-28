@@ -23,8 +23,8 @@ const client = createLocalServiceClient();
 const feeds = new Map();
 const sourceIds = [];
 
-// Resztki przerwanego przebiegu: najpierw historie, bo usuniecie zrodla z faktami
-// kilku zrodel tej samej historii koliduje na unikalnym indeksie facts.
+// Resztki przerwanego przebiegu: najpierw historie, bo po usunieciu zrodel
+// nie da sie juz ich znalezc po adresie markera.
 const { data: leftovers, error: leftoversError } = await client
   .from("story_sources")
   .select("story_id, source_items!inner(sources!inner(url))")

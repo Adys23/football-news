@@ -5,7 +5,7 @@ import { articleCheckIssues } from "../lib/article-checks.ts";
 import { loadArticleContext } from "../lib/article-context.ts";
 import { itemSetDedupeKey } from "../lib/facts.ts";
 import type { HandlerContext, JobHandler } from "../lib/handler-context.ts";
-import { JobError } from "../lib/jobs.ts";
+import { DeferJobError, JobError } from "../lib/jobs.ts";
 import { logInfo } from "../lib/log.ts";
 import { readPipelineSettings } from "../lib/settings.ts";
 import { loadApprovedFacts } from "../lib/story-facts.ts";
@@ -14,6 +14,7 @@ import { callLlm } from "../llm/call.ts";
 import { loadPrompt } from "../llm/prompts.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
+const MIN_DEFER_MS = 5 * 60 * 1000;
 
 /**
  * Ostatni etap przed redaktorem: ocena modelu plus kontrole deterministyczne.
@@ -121,24 +122,31 @@ async function loadArticle(ctx: HandlerContext, articleId: string) {
 }
 
 /**
- * Limit artykulow przekazanych redaktorowi w ciagu godziny. Przekroczenie to blad
- * joba z backoffem; po wyczerpaniu prob job trafia do dead i wymaga ponowienia
- * (docs/runbook.md, sekcja 6) - odlozenie bez zuzywania prob wymaga RPC w kolejce.
+ * Limit artykulow przekazanych redaktorowi w ciagu godziny. Przekroczenie odklada
+ * joba do chwili, gdy najstarszy policzony artykul wypadnie z okna - bez zuzycia
+ * prob, wiec kontrola nie trafia do dead tylko dlatego, ze newsroom ma szczyt.
  */
 async function assertHourlyLimit(ctx: HandlerContext, limit: number): Promise<void> {
-  const since = new Date((ctx.now ?? new Date()).getTime() - HOUR_MS).toISOString();
-  const { count, error } = await ctx.client
+  const now = (ctx.now ?? new Date()).getTime();
+  const { data, count, error } = await ctx.client
     .from("article_scores")
-    .select("article_id, articles!inner(status)", { count: "exact", head: true })
-    .gte("checked_at", since)
-    .in("articles.status", ["review", "approved", "published"]);
+    .select("checked_at, articles!inner(status)", { count: "exact" })
+    .gte("checked_at", new Date(now - HOUR_MS).toISOString())
+    .in("articles.status", ["review", "approved", "published"])
+    .order("checked_at", { ascending: true })
+    .limit(1);
 
   if (error) {
     throw new JobError(`Odczyt limitu artykulow: ${error.message}`);
   }
 
   if ((count ?? 0) >= limit) {
-    throw new JobError(`Limit ${limit} artykulow na godzine osiagniety - ponowienie pozniej.`);
+    const oldest = data?.[0]?.checked_at;
+    const untilFree = oldest ? new Date(oldest).getTime() + HOUR_MS - now : 0;
+    throw new DeferJobError(
+      `Limit ${limit} artykulow na godzine osiagniety - odlozone.`,
+      Math.max(untilFree, MIN_DEFER_MS),
+    );
   }
 }
 

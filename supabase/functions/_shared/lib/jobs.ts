@@ -33,6 +33,17 @@ export class JobError extends Error {
   }
 }
 
+/** Job nie moze sie teraz wykonac, ale to nie jego wina - wraca do kolejki bez zuzycia proby. */
+export class DeferJobError extends JobError {
+  readonly delayMs: number;
+
+  constructor(message: string, delayMs: number) {
+    super(message);
+    this.name = "DeferJobError";
+    this.delayMs = delayMs;
+  }
+}
+
 /** Zakolejkowuje zadanie. Zwraca null, gdy identyczne zadanie juz czeka w kolejce. */
 export async function enqueueJob<T extends JobType>(
   client: ServiceClient,
@@ -109,6 +120,23 @@ export async function failJob(client: ServiceClient, jobId: string, reason: stri
 
   if (error) {
     throw new JobError(`fail_job(${jobId}): ${error.message}`);
+  }
+}
+
+export async function deferJob(
+  client: ServiceClient,
+  jobId: string,
+  delayMs: number,
+  reason: string,
+): Promise<void> {
+  const { error } = await client.rpc("defer_job", {
+    p_id: jobId,
+    p_delay: `${Math.max(0, Math.ceil(delayMs / 1000))} seconds`,
+    p_reason: reason,
+  });
+
+  if (error) {
+    throw new JobError(`defer_job(${jobId}): ${error.message}`);
   }
 }
 

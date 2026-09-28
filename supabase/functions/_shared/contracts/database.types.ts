@@ -1351,6 +1351,10 @@ export type Database = {
         }
       }
       complete_job: { Args: { p_id: string }; Returns: undefined }
+      defer_job: {
+        Args: { p_delay: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
       enqueue_job: {
         Args: {
           p_article_id?: string

@@ -1,4 +1,4 @@
-import { claimJobs, completeJob, failJob } from "./jobs.ts";
+import { DeferJobError, claimJobs, completeJob, deferJob, failJob } from "./jobs.ts";
 import { logError, logInfo } from "./log.ts";
 import type { HandlerContext } from "./handler-context.ts";
 import { isPipelineEnabled } from "./handler-context.ts";
@@ -28,6 +28,12 @@ export async function processJobBatch(ctx: HandlerContext, limit = 10): Promise<
       await completeJob(ctx.client, job.id);
       logInfo("job.done", { jobId: job.id, type: job.type });
     } catch (error) {
+      if (error instanceof DeferJobError) {
+        logInfo("job.deferred", { jobId: job.id, type: job.type, delayMs: error.delayMs });
+        await deferJob(ctx.client, job.id, error.delayMs, error.message);
+        continue;
+      }
+
       const message = error instanceof Error ? error.message : "nieznany blad";
       logError("job.failed", { jobId: job.id, type: job.type, message });
       await failJob(ctx.client, job.id, message);

@@ -211,6 +211,8 @@ Progi decyzyjne (konfigurowalne w `settings`):
 | Konflikt o `severity = high`                                             | `review` z wyróżnieniem w panelu         |
 | `confidence >= 0.90`, brak konfliktów, co najmniej dwa niezależne źródła | `auto` (i tak trafia do redaktora w MVP) |
 
+Dwa pierwsze progi to `settings.min_approved_fact_confidence` i `settings.min_source_trust` (domyślnie 0.8); `applyAssessmentRules` nakłada je w kodzie na wynik modelu.
+
 Tylko fakty z `approved_facts` trafiają do etapu pisania. Reszta jest w bazie, ale nie w tekście.
 
 Implementacja (`_shared/handlers/validate-facts.ts`):

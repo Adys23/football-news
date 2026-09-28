@@ -96,7 +96,10 @@ export const handleValidateFacts: JobHandler = async (job, ctx) => {
     ctx,
   );
 
-  const { assessment, unknownFactIds } = applyAssessmentRules(data, groups);
+  const { assessment, unknownFactIds } = applyAssessmentRules(data, groups, {
+    minApprovedFactConfidence: settings.min_approved_fact_confidence,
+    minSourceTrust: settings.min_source_trust,
+  });
   if (unknownFactIds.length > 0) {
     logInfo("validate.unknown_fact_ids", { storyId, unknownFactIds: unknownFactIds.join(",") });
   }
