@@ -327,6 +327,8 @@ Snapshot treści przed każdą zmianą - podstawa do policzenia, jak często red
 | `edited_by`     | uuid FK -> `profiles` (null = AI) |
 | `created_at`    | timestamptz                       |
 
+Redaktor nie zapisuje rewizji ani artykułu osobnymi zapytaniami. Panel woła `save_article_edit(p_article_id, p_expected_updated_at, p_title, p_lead, p_content)`, która w jednej transakcji blokuje wiersz, zapisuje wersję sprzed zmiany z `edited_by = auth.uid()` i aktualizuje artykuł. Funkcja działa jako invoker, więc obowiązuje RLS redaktora. Edytowalny jest tylko status `review`: `draft` należy do pipeline'u, a opublikowany tekst zmienia się przez `article_updates`. Zapis bez zmian nie tworzy rewizji. Kody błędów: `42501` brak roli redaktora, `P0002` brak artykułu, `55000` status inny niż `review`, `40001` artykuł zmieniony po otwarciu formularza (`updated_at` inny niż `p_expected_updated_at`; panel musi odesłać wartość z bazy co do mikrosekundy, bez przejścia przez `Date`).
+
 ### 5.6 `article_entities`
 
 Automatyczne linkowanie wewnętrzne.
@@ -531,6 +533,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0017_link_source_item.sql`   | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                          |
 | `0018_pipeline_hardening.sql` | `defer_job()`, unikalność `facts` po `source_item_id`, pełny indeks `jobs.dedupe_key`, progi oceny w `settings`                   |
 | `0019_editor_audit.sql`       | audyt z sesji redaktora (`security definer`), triggery `edit` i `source_change`, `requeue_dead_job()` dla admina                  |
+| `0020_save_article_edit.sql`  | `save_article_edit()`: snapshot w `article_revisions` i edycja artykułu `review` w jednej transakcji                              |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
