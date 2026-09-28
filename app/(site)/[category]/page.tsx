@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { ArticleList } from "@/components/public/ArticleList";
 import { getCategoryArticles, getCategoryBySlug } from "@/lib/public/listings";
 import { categoryPath } from "@/lib/public/paths";
-
-// Musi byc literalem (analiza statyczna Next.js); ta sama wartosc co PUBLIC_REVALIDATE_SECONDS.
-export const revalidate = 60;
-
-// Pusta lista wlacza ISR na zadanie: build nie potrzebuje bazy, strony powstaja przy pierwszej wizycie.
-// Statyczne segmenty (/admin, /login, /brak-dostepu, /api) maja pierwszenstwo przed [category].
-export function generateStaticParams(): { category: string }[] {
-  return [];
-}
 
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
@@ -34,7 +26,10 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   };
 }
 
+// Render na zadanie jak cala grupa (site); cache danych w lib/public/client.ts.
+// Statyczne segmenty pierwszego poziomu maja pierwszenstwo: RESERVED_PATH_SEGMENTS.
 export default async function CategoryPage({ params }: CategoryPageProps) {
+  await connection();
   const { category: slug } = await params;
   const category = await getCategoryBySlug(slug);
   if (!category) {

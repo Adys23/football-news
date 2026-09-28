@@ -187,7 +187,7 @@ Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS 
 - Artykuł ma adres `/<slug kategorii>/<slug>` (jedna trasa `app/(site)/[category]/[slug]`); artykuł bez kategorii trafia pod `pilka-nozna`, a zła kategoria w adresie daje 308 na adres kanoniczny.
 - Dane publiczne czyta `lib/public/queries.ts` klientem anon bez ciasteczek (sesja redaktora nie wpuści szkicu do cache), z filtrem `status = 'published'` ponad RLS. Zapytania idą do Data Cache Next.js z tagami z `lib/public/cache-tags.ts` i `revalidate = 60` jako siatką bezpieczeństwa do czasu webhooka publikacji. `cacheComponents` jest wyłączone: włączenie dotyczy całej aplikacji, łącznie z panelem.
 - Aktualizacje (`article_updates`) bez `approved_by` nie trafiają na stronę.
-- Strona główna i strony kategorii (`app/(site)/page.tsx`, `app/(site)/[category]/page.tsx`) czytają listy z `lib/public/listings.ts` tym samym klientem, z tagiem `articles` (kategoria dodatkowo `category:<slug>`). Nagłówek i stopka z nawigacją po kategoriach są w `app/(site)/layout.tsx`, więc panel ich nie dostaje. Lista kategorii domyślnej obejmuje też artykuły bez kategorii. Build nie ma bazy: w `next build` nieosiągalna baza daje pustą listę strony głównej i nawigacji (inne błędy zapytań nadal przerywają build), a dane dociąga pierwsza rewalidacja.
+- Strona główna i strony kategorii (`app/(site)/page.tsx`, `app/(site)/[category]/page.tsx`) czytają listy z `lib/public/listings.ts` tym samym klientem, z tagiem `articles` (kategoria dodatkowo `category:<slug>`). Nagłówek i stopka z nawigacją po kategoriach są w `app/(site)/layout.tsx`, więc panel ich nie dostaje. Lista kategorii domyślnej obejmuje też artykuły bez kategorii. Build nie ma bazy, więc layout `(site)`, strona główna i kategorie renderują się na żądanie (`await connection()`), a cache zostaje na poziomie danych: zapytania idą przez `lib/public/client.ts` z tagami i `revalidate = 60`, odświeżane webhookiem publikacji. Błędy zapytań są rzucane. Kategoria nie może mieć sluga ze statycznego segmentu pierwszego poziomu (`RESERVED_PATH_SEGMENTS` w `lib/public/paths.ts`); każdy nowy taki segment w `app/` trzeba tam dopisać.
 
 ### 3.9 Platform
 
@@ -346,7 +346,7 @@ Strategia renderowania:
 
 | Trasa                                | Strategia                                      |
 | ------------------------------------ | ---------------------------------------------- |
-| `/` i strony kategorii               | ISR, `revalidate = 60` plus tagi               |
+| `/` i strony kategorii               | Render na żądanie, cache danych: tagi + 60 s   |
 | `/transfery/[slug]`                  | ISR generowane na żądanie, unieważniane tagiem |
 | `/zawodnicy/[slug]`, `/kluby/[slug]` | ISR, `revalidate = 3600`                       |
 | `/admin/**`                          | Dynamiczne, `no-store`, wymuszony login        |
