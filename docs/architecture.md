@@ -165,6 +165,7 @@ Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `s
 
 - przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
 - zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,
+- zmiana tytułu lub leadu czyści `seo_title` i `seo_description` i kolejkuje odświeżenie `GENERATE_SEO` (migracja 0025, szczegóły w `docs/ai-pipeline.md`). Dopóki job nie skończy, sekcja SEO i blokady publikacji pokazują „Metadane SEO są odświeżane po edycji tytułu lub leadu” zamiast pustych pól (`seoRefreshPending`),
 - gdy ostatnia rewizja redaktora jest późniejsza niż `article_scores.checked_at`, sekcja „Ocena AI” pokazuje, że ocena dotyczy wersji sprzed edycji. Ponowna ocena po edycji to osobna zmiana pipeline'u.
 
 Publikacja i odrzucenie (`components/admin/ArticleDecision.tsx`, server actions `publishArticle` i `rejectArticle`, logika w `lib/admin/publish.ts`) są dostępne dla artykułów `review` i `approved`:

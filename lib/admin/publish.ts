@@ -15,8 +15,27 @@ export interface PublishReadiness {
   categoryId: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  /** Ostatnia edycja redaktora z article_revisions, null bez edycji. */
+  lastEditedAt: string | null;
   /** null, gdy artykul nie ma oceny automatycznej. */
   unsupportedClaims: number | null;
+}
+
+export const SEO_REFRESH_PENDING =
+  "Metadane SEO są odświeżane po edycji tytułu lub leadu. Odśwież stronę za chwilę; jeśli komunikat nie znika, administrator powinien sprawdzić joby GENERATE_SEO.";
+
+/**
+ * Po zmianie tytulu lub leadu save_article_edit (0025) czysci oba pola SEO i kolejkuje
+ * GENERATE_SEO. Puste SEO po edycji to stan przejsciowy, nie brak w tekscie.
+ */
+export function seoRefreshPending(
+  article: Pick<PublishReadiness, "status" | "seoTitle" | "seoDescription" | "lastEditedAt">,
+): boolean {
+  return (
+    DECISION_STATUSES.includes(article.status) &&
+    article.lastEditedAt !== null &&
+    (article.seoTitle === null || article.seoDescription === null)
+  );
 }
 
 /**
@@ -50,11 +69,15 @@ export function publishBlockers(article: PublishReadiness): string[] {
   if (!article.categoryId) {
     blockers.push("Brak kategorii.");
   }
-  if (!checkSeoField("seo_title", article.seoTitle).ok) {
-    blockers.push("Tytuł SEO jest pusty albo poza limitem długości.");
-  }
-  if (!checkSeoField("seo_description", article.seoDescription).ok) {
-    blockers.push("Opis SEO jest pusty albo poza limitem długości.");
+  if (seoRefreshPending(article)) {
+    blockers.push(SEO_REFRESH_PENDING);
+  } else {
+    if (!checkSeoField("seo_title", article.seoTitle).ok) {
+      blockers.push("Tytuł SEO jest pusty albo poza limitem długości.");
+    }
+    if (!checkSeoField("seo_description", article.seoDescription).ok) {
+      blockers.push("Opis SEO jest pusty albo poza limitem długości.");
+    }
   }
 
   return blockers;
