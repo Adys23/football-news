@@ -1,8 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { publishArticle, rejectArticle } from "@/app/admin/artykuly/[id]/actions";
-import { MAX_REJECT_REASON_LENGTH, type DecisionState } from "@/lib/admin/publish";
+import {
+  CONFIRM_STALE_SCORE_FIELD,
+  MAX_REJECT_REASON_LENGTH,
+  type DecisionState,
+} from "@/lib/admin/publish";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
@@ -11,13 +15,18 @@ export function ArticleDecision({
   articleId,
   updatedAt,
   blockers,
+  scoresStale,
 }: {
   articleId: string;
   updatedAt: string;
   blockers: string[];
+  /** Ocena automatyczna jest sprzed edycji redaktora: publikacja wymaga potwierdzenia. */
+  scoresStale: boolean;
 }) {
   const [publishState, publishAction, publishing] = useActionState(publishArticle, undefined);
   const [rejectState, rejectAction, rejecting] = useActionState(rejectArticle, undefined);
+  // React czysci niekontrolowane pola formularza po akcji, takze po bledzie.
+  const [reason, setReason] = useState("");
   const pending = publishing || rejecting;
 
   return (
@@ -34,6 +43,15 @@ export function ArticleDecision({
               ))}
             </ul>
           </div>
+        ) : null}
+        {scoresStale && blockers.length === 0 ? (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name={CONFIRM_STALE_SCORE_FIELD} required className="mt-1" />
+            <span>
+              Sprawdziłem poprawiony tekst. Wiem, że ocena automatyczna dotyczy wersji sprzed
+              edycji.
+            </span>
+          </label>
         ) : null}
         <DecisionError state={publishState} />
         <div>
@@ -53,6 +71,8 @@ export function ArticleDecision({
             name="reason"
             rows={3}
             maxLength={MAX_REJECT_REASON_LENGTH}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
             className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-2.5 py-2 text-base outline-none focus-visible:ring-3 md:text-sm"
           />
         </div>

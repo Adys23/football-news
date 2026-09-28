@@ -169,7 +169,7 @@ Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `s
 
 Publikacja i odrzucenie (`components/admin/ArticleDecision.tsx`, server actions `publishArticle` i `rejectArticle`, logika w `lib/admin/publish.ts`) są dostępne dla artykułów `review` i `approved`:
 
-- „Publikuj” jest zablokowany, gdy `publishBlockers` zwraca powody: brak oceny automatycznej, `unsupported_claims > 0`, brak leadu lub kategorii, treść pusta albo spoza schematu, pola SEO poza limitami `seoOutputSchema`. Server action liczy blokady ponownie przed wywołaniem RPC `publish_article`,
+- „Publikuj” jest zablokowany, gdy `publishBlockers` zwraca powody: brak oceny automatycznej, `unsupported_claims > 0`, brak leadu lub kategorii, treść pusta albo spoza schematu, pola SEO poza limitami `seoOutputSchema`. Gdy ocena automatyczna jest sprzed edycji redaktora, publikacja wymaga zaznaczenia potwierdzenia (sprawdza je też baza). Server action liczy blokady ponownie przed wywołaniem RPC `publish_article`,
 - „Odrzuć” przyjmuje opcjonalny powód (do 500 znaków), który trafia do `audit_log`,
 - po decyzji `revalidatePath` odświeża dashboard i widok artykułu; cache publiczny unieważnia webhook publikacji (sekcja 7).
 
