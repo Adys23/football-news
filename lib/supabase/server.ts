@@ -22,7 +22,7 @@ export async function createSupabaseServerClient() {
           }
         } catch {
           // Server Component nie moze zapisywac ciasteczek.
-          // Odswiezaniem sesji zajmuje sie middleware.
+          // Odswiezaniem sesji zajmuje sie proxy.ts.
         }
       },
     },

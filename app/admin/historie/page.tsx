@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { requireRole } from "@/lib/auth/dal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminStoriesPage() {
+  await requireRole("editor");
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: stories, error } = await supabase
     .from("stories")
@@ -32,16 +31,7 @@ export default async function AdminStoriesPage() {
         {" / Historie"}
       </p>
       <h1 className="mt-4 text-2xl font-semibold tracking-tight">Wykryte wydarzenia</h1>
-      <p className="mt-2 text-sm text-neutral-600">
-        Grupowanie zrodel bez LLM. Logowanie redaktora jest w etapie 3 - bez sesji RLS nie pokaze
-        warstwy produkcyjnej.
-      </p>
-
-      {!user ? (
-        <p className="mt-6 text-sm text-neutral-600">
-          Brak sesji. Lokalne konto: <code>redaktor@local.test</code>.
-        </p>
-      ) : null}
+      <p className="mt-2 text-sm text-neutral-600">Grupowanie zrodel bez LLM.</p>
 
       {error ? (
         <p className="mt-8 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">

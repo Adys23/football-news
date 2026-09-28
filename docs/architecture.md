@@ -178,7 +178,10 @@ Jedno repozytorium, jedna aplikacja Next.js w katalogu głównym, cały backend 
 │  │  ├─ kluby/[slug]/page.tsx
 │  │  ├─ autorzy/[slug]/page.tsx
 │  │  └─ o-nas/zasady-redakcyjne/page.tsx
+│  ├─ login/                       # logowanie i wylogowanie (server actions)
+│  ├─ brak-dostepu/page.tsx        # zalogowany bez roli redaktora
 │  ├─ admin/
+│  │  ├─ layout.tsx                # requireRole('editor'), nawigacja
 │  │  ├─ page.tsx                  # dashboard newsroomu
 │  │  ├─ historie/[id]/page.tsx    # historia + fakty + źródła
 │  │  ├─ artykuly/[id]/page.tsx    # widok review
@@ -194,7 +197,8 @@ Jedno repozytorium, jedna aplikacja Next.js w katalogu głównym, cały backend 
 │  ├─ article/                     # BlockRenderer, UpdateTimeline, SourceList, JsonLd
 │  └─ admin/                       # ScoreBadge, FactTable, ReviewActions
 ├─ lib/
-│  ├─ supabase/{server,client,admin}.ts
+│  ├─ supabase/{server,client,admin,proxy}.ts
+│  ├─ auth/                        # dal.ts (requireRole), roles.ts, redirects.ts
 │  ├─ seo/{metadata,jsonld,slug}.ts
 │  └─ format/{date,number}.ts
 ├─ supabase/
@@ -347,7 +351,7 @@ Google dopuszcza AI, ale karze masowe tworzenie stron bez wartości dodanej. Dla
 - **RLS włączone na wszystkich tabelach**. Anonimowy użytkownik czyta wyłącznie `articles` ze statusem `published` oraz encje publiczne (`players`, `clubs`, `leagues`, `categories`, `authors`, `image_assets`). Cała warstwa produkcyjna (`sources`, `source_items`, `stories`, `facts`, `jobs`, `llm_calls`) jest niewidoczna dla anona.
 - **Klucze**: `service_role` i `OPENAI_API_KEY` istnieją wyłącznie w środowisku Edge Functions i w Supabase Vault. Next.js używa klucza publicznego i sesji użytkownika; klient admina w `lib/supabase/admin.ts` działa tylko w kodzie serwerowym panelu i wyłącznie do akcji redakcyjnych.
 - **Webhooki** weryfikowane sekretem; `/api/revalidate` odrzuca żądania bez poprawnego nagłówka.
-- **Panel** chroniony middleware'em sprawdzającym rolę, nie tylko fakt zalogowania.
+- **Panel** chroniony dwuwarstwowo. `proxy.ts` (w Next 16 następca middleware) odświeża sesję i bez sesji przekierowuje z `/admin` na `/login`, bez zapytań do bazy. Z `/login` do panelu przekierowuje dopiero strona logowania po sprawdzeniu w DAL, żeby poprawny JWT bez profilu nie dał pętli. Rolę i `profiles.active` sprawdza `requireRole` z `lib/auth/dal.ts` w każdej stronie i server action panelu, więc samo zalogowanie nie wystarcza.
 
 ---
 
