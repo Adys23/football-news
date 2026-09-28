@@ -353,6 +353,8 @@ Automatyczne linkowanie wewnętrzne.
 | `article_id` | uuid FK     |
 | `created_at` | timestamptz |
 
+Wpisy dodaje trigger `articles_record_slug_redirect` (0023) przy każdej zmianie `slug` artykułu, który był opublikowany (`status = 'published'` albo wypełnione `published_at`). Wpis wskazuje artykuł, nie docelowy slug, więc kolejne zmiany (A -> B -> C) dają dwa wpisy prowadzące jednym skokiem na aktualny adres. Slug zajęty przez dowolny artykuł (powrót do starego sluga, przejęcie sluga innego artykułu, także przy `insert`) usuwa jego wpis - adres należy odtąd do tego artykułu, nawet gdy ten nie jest opublikowany. Slug zwolniony przez inny artykuł wskazuje ostatniego właściciela. Zmiana kategorii nie potrzebuje wpisu - strona szuka artykułu po slugu i sama przekierowuje na ścieżkę kanoniczną.
+
 ### 5.8 `authors`, `categories`
 
 `authors`: `id`, `name`, `slug`, `bio`, `avatar_url`, `role_title`, `profile_id` (FK -> `profiles`), `x_url`. Autorem publikowanego artykułu jest zawsze realna osoba z redakcji - to świadoma decyzja pod E-E-A-T i pod uczciwość wobec czytelnika.
@@ -540,6 +542,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0020_save_article_edit.sql`      | `save_article_edit()`: snapshot w `article_revisions` i edycja artykułu `review` w jednej transakcji                              |
 | `0021_publish_reject_article.sql` | `publish_article()`, `reject_article()` z powodem w audycie, `search_path` w `enforce_publish_guard`                              |
 | `0022_revalidate_webhook.sql`     | warunkowo `pg_net`, `send_revalidate_webhook()` (sekrety z Vault), triggery webhooka na `articles` i `article_updates`            |
+| `0023_article_slug_redirects.sql` | trigger `articles_record_slug_redirect`: zmiana sluga opublikowanego artykułu zapisuje stary slug w `article_redirects`           |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 

@@ -117,10 +117,10 @@ Dotyczy też sytuacji odwrotnej: artykuł wycofany (`archived`) albo poprawiony,
 
 Nie robimy tego bez potrzeby. Gdy trzeba:
 
-1. Dopisz stary slug do `article_redirects`.
-2. Zmień `slug` w `articles`.
+1. Zmień `slug` w `articles`. Stary slug do `article_redirects` dopisuje trigger `articles_record_slug_redirect` (migracja 0023); ręczny wpis nie jest potrzebny.
+2. Sprawdź wpis: `select old_slug, article_id from article_redirects where article_id = '<id>';`.
 3. Tagi `article:<stary>`, `article:<nowy>` i `sitemap` unieważnia webhook publikacji (payload z `previous_slug`). Jeśli nie zadziałał, wywołaj go ręcznie jak w sekcji 8, krok 4.
-4. Sprawdź, że stary adres zwraca 301 na nowy.
+4. Sprawdź, że stary adres przekierowuje na nowy: `curl -sI https://<strona>/<kategoria>/<stary-slug>` zwraca `308` (stałe przekierowanie `permanentRedirect` w Next.js, dla Google równoważne 301) z nagłówkiem `location` na aktualny adres.
 
 ---
 
