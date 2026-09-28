@@ -41,6 +41,8 @@ flowchart TD
   check -->|quality < prog| blocked
   check -->|quality >= prog| review["articles.status = review"]
   review --> editor["Redaktor"]
+  editor -->|zmiana tytulu lub leadu| refresh["GENERATE_SEO (odswiezenie)"]
+  refresh --> editor
   editor --> publish["PUBLISH_ARTICLE"]
 ```
 
@@ -328,7 +330,15 @@ Implementacja (`generate-title.ts`, `generate-seo.ts`):
 - do wywołania B trafiają wyłącznie kandydaci, którzy przeszli `checkTitle` z encjami rozpoznanymi w faktach; wybór spoza tej listy albo niespełniający kontroli to błąd joba, tak samo jak brak jakiegokolwiek poprawnego kandydata,
 - gdy słownik zawodników i klubów nie rozpoznaje żadnej encji, wymóg encji w tytule nie jest sprawdzany - pozostałe reguły tak,
 - `seo_title` przechodzi `checkTitle`; zajęty slug dostaje sufiks `-2`, `-3` w granicy 90 znaków (`lib/slug.ts`),
-- oba etapy zapisują tylko artykuł w `draft`.
+- oba etapy zapisują tylko artykuł w `draft`; wyjątkiem jest odświeżenie SEO opisane niżej.
+
+Odświeżenie SEO po edycji redaktora (migracja 0025). Gdy redaktor zmieni w recenzji tytuł albo lead, `save_article_edit` w tej samej transakcji czyści `seo_title` i `seo_description` i kolejkuje `GENERATE_SEO` z kluczem `GENERATE_SEO:refresh:<article_id>` (przez `enqueue_seo_refresh`, bo redaktor nie ma zapisu do `jobs`). Zmiana samej treści niczego nie kolejkuje, a kilka edycji przed przetworzeniem joba daje jeden job. Job w toku jest przy kolejnej edycji odpinany od klucza, żeby odświeżenie nowej wersji nie zginęło na konflikcie `dedupe_key`. Handler rozpoznaje tryb po stanie artykułu (`seoJobMode` w `lib/seo-mode.ts`) i kluczu joba:
+
+- `draft` - ścieżka opisana wyżej, ze slugiem i kolejką do `CHECK_ARTICLE`,
+- `review` lub `approved` z pustym SEO i job z kluczem odświeżenia - ten sam prompt 07 i ta sama wersja, wejście z aktualnego tytułu i leadu, walidacja zod i `checkTitle` jak w szkicu. Zapisuje tylko `seo_title` i `seo_description`, bez zmiany sluga (slug zmienia się tylko w szkicu) i bez ponownej kontroli jakości. Zapis jest warunkowy: status, puste SEO oraz tytuł i lead równe tym, z których powstało SEO. Gdy redaktor zmienił tekst w trakcie wywołania modelu, zapis nie przechodzi i job kończy się błędem; nową wersję odświeża job zakolejkowany przy tej edycji, a ponowienie starego (już bez klucza) kończy się bez pracy,
+- w pozostałych przypadkach (opublikowany, SEO już uzupełnione, job bez klucza odświeżenia) zapisuje log i kończy.
+
+Do czasu odświeżenia puste pola SEO blokują „Publikuj” (`publishBlockers`), a panel pokazuje komunikat o odświeżaniu metadanych.
 
 ---
 
