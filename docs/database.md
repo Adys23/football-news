@@ -353,7 +353,7 @@ Automatyczne linkowanie wewnętrzne.
 | `article_id` | uuid FK     |
 | `created_at` | timestamptz |
 
-Wpisy dodaje trigger `articles_record_slug_redirect` (0023) przy każdej zmianie `slug` artykułu, który był opublikowany (`status = 'published'` albo wypełnione `published_at`). Wpis wskazuje artykuł, nie docelowy slug, więc kolejne zmiany (A -> B -> C) dają dwa wpisy prowadzące jednym skokiem na aktualny adres. Powrót do starego sluga usuwa jego wpis, a slug zwolniony przez inny artykuł wskazuje ostatniego właściciela. Zmiana kategorii nie potrzebuje wpisu - strona szuka artykułu po slugu i sama przekierowuje na ścieżkę kanoniczną.
+Wpisy dodaje trigger `articles_record_slug_redirect` (0023) przy każdej zmianie `slug` artykułu, który był opublikowany (`status = 'published'` albo wypełnione `published_at`). Wpis wskazuje artykuł, nie docelowy slug, więc kolejne zmiany (A -> B -> C) dają dwa wpisy prowadzące jednym skokiem na aktualny adres. Slug zajęty przez dowolny artykuł (powrót do starego sluga, przejęcie sluga innego artykułu, także przy `insert`) usuwa jego wpis - adres należy odtąd do tego artykułu, nawet gdy ten nie jest opublikowany. Slug zwolniony przez inny artykuł wskazuje ostatniego właściciela. Zmiana kategorii nie potrzebuje wpisu - strona szuka artykułu po slugu i sama przekierowuje na ścieżkę kanoniczną.
 
 ### 5.8 `authors`, `categories`
 
