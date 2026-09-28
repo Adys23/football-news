@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReviewQueueItem } from "@/lib/admin/dashboard";
 import {
   PUBLISHABILITY_LABELS,
@@ -21,7 +22,9 @@ export function ReviewQueue({ items, total }: { items: ReviewQueueItem[]; total:
       <ol className="mt-4 space-y-3">
         {items.map((item) => (
           <li key={item.articleId} className="rounded-md border border-neutral-200 p-4">
-            <p className="font-medium">{item.title}</p>
+            <Link href={`/admin/artykuly/${item.articleId}`} className="font-medium underline">
+              {item.title}
+            </Link>
             <p className="mt-1 text-xs text-neutral-500">
               {eventTypeLabel(item.eventType)} · waga {item.importance} · pewność{" "}
               {formatScore(item.confidence)}

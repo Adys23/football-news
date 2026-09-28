@@ -14,6 +14,32 @@ export const STORY_STATUS_LABELS: Record<Enums<"story_status">, string> = {
   blocked: "Zablokowana",
 };
 
+export const ARTICLE_STATUS_LABELS: Record<Enums<"article_status">, string> = {
+  draft: "Szkic",
+  review: "Do weryfikacji",
+  approved: "Zaakceptowany",
+  published: "Opublikowany",
+  rejected: "Odrzucony",
+  archived: "Zarchiwizowany",
+};
+
+export const SOURCE_TYPE_LABELS: Record<Enums<"source_type">, string> = {
+  official_club: "Oficjalny klub",
+  official_league: "Oficjalna liga",
+  official_federation: "Federacja",
+  journalist: "Dziennikarz",
+  major_outlet: "Duży serwis",
+  local_outlet: "Serwis lokalny",
+  aggregator: "Agregator",
+  social: "Media społecznościowe",
+};
+
+export const SEVERITY_LABELS: Record<"low" | "medium" | "high", string> = {
+  low: "niska",
+  medium: "średnia",
+  high: "wysoka",
+};
+
 export const PUBLISHABILITY_LABELS: Record<Enums<"publishability">, string> = {
   auto: "Szybka ścieżka",
   review: "Wymaga uwagi",
