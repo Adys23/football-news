@@ -152,6 +152,19 @@ async function connectCdp(url) {
     }
   });
 
+  // Gdy Chromium padnie, zamkniete polaczenie konczy wszystkie oczekiwania bledem
+  // zamiast zawiesic skrypt (waitFor ma wlasny timeout, send nie mialby zadnego).
+  socket.addEventListener("close", () => {
+    const error = new Error("Polaczenie z Chromium zostalo zamkniete");
+    for (const request of pending.values()) {
+      request.reject(error);
+    }
+    pending.clear();
+    for (const waiter of waiters.splice(0)) {
+      waiter.reject(error);
+    }
+  });
+
   return {
     send(method, params = {}, sessionId) {
       const id = nextId++;
@@ -173,6 +186,10 @@ async function connectCdp(url) {
           resolve: (params) => {
             clearTimeout(timer);
             resolve(params);
+          },
+          reject: (error) => {
+            clearTimeout(timer);
+            reject(error);
           },
         };
         waiters.push(waiter);
