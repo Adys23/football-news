@@ -39,10 +39,9 @@ export default async function AdminPage() {
         </p>
       ) : null}
 
-      <dl className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <dl className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Nowe historie (doba)" value={counts.newStories} />
         <StatCard label="Do weryfikacji" value={counts.inReview} />
-        <StatCard label="Gotowe do publikacji" value={counts.approved} />
         <StatCard label="Opublikowane dziś" value={counts.publishedToday} />
       </dl>
 
