@@ -1353,6 +1353,7 @@ export type Database = {
         };
         Returns: string;
       };
+      enqueue_seo_refresh: { Args: { p_article_id: string }; Returns: string };
       fail_job: { Args: { p_error: string; p_id: string }; Returns: undefined };
       find_entity_story: { Args: { p_since: string; p_title: string }; Returns: string };
       find_similar_stories: {

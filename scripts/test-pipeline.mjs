@@ -5,11 +5,12 @@
  * Nie wola zewnetrznego HTTP ani LLM (fixtures przy LLM_ENABLED != true).
  */
 import { readFileSync } from "node:fs";
-import { createLocalServiceClient } from "./lib/local-supabase.mjs";
+import { createLocalEditorClient, createLocalServiceClient } from "./lib/local-supabase.mjs";
 import { fail } from "./lib/run.mjs";
 import { parseFeed } from "../supabase/functions/_shared/lib/rss.ts";
 import { enqueueJob } from "../supabase/functions/_shared/lib/jobs.ts";
 import { processJobBatch } from "../supabase/functions/_shared/lib/worker.ts";
+import { seoRefreshDedupeKey } from "../supabase/functions/_shared/lib/seo-mode.ts";
 
 const MARKER = "https://example.test/pipeline-smoke";
 const rss = readFileSync("tests/fixtures/sources/bruno-contract.rss.xml", "utf8");
@@ -311,10 +312,102 @@ if (
   fail(`Oczekiwano 7 udanych wywolan na fixtures, jest ${perStage}.`);
 }
 
+console.log("test:pipeline OK: kontrola jakosci -> artykul w review, 7 wywolan LLM w llm_calls.");
+
+// Odswiezenie SEO po edycji tytulu w recenzji (0025): zapis przez save_article_edit
+// w sesji redaktora z seeda, tak jak w panelu, potem worker.
+const editor = await createLocalEditorClient();
+const { data: reviewed, error: reviewedError } = await editor
+  .from("articles")
+  .select("slug, lead, content, updated_at")
+  .eq("id", article.id)
+  .single();
+if (reviewedError) {
+  fail(reviewedError.message);
+}
+
+const { error: editError } = await editor.rpc("save_article_edit", {
+  p_article_id: article.id,
+  p_expected_updated_at: reviewed.updated_at,
+  p_title: "Manchester United przedłużył kontrakt z Bruno Fernandesem do 2028 roku",
+  p_lead: reviewed.lead,
+  p_content: reviewed.content,
+});
+if (editError) {
+  fail(`save_article_edit: ${editError.message}`);
+}
+
+const [cleared, queued] = await Promise.all([
+  client.from("articles").select("seo_title, seo_description").eq("id", article.id).single(),
+  client
+    .from("jobs")
+    .select("payload, status")
+    .eq("type", "GENERATE_SEO")
+    .eq("dedupe_key", seoRefreshDedupeKey(article.id)),
+]);
+for (const result of [cleared, queued]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+if (
+  cleared.data.seo_title !== null ||
+  cleared.data.seo_description !== null ||
+  (queued.data ?? []).length !== 1 ||
+  queued.data[0].status !== "queued" ||
+  queued.data[0].payload?.articleId !== article.id
+) {
+  fail(
+    `Edycja tytulu nie wyczyscila SEO albo nie zakolejkowala odswiezenia: ${JSON.stringify({ seo: cleared.data, jobs: queued.data })}.`,
+  );
+}
+
+for (let i = 0; i < 5; i += 1) {
+  const n = await processJobBatch({ client, fetchImpl, worker: "pipeline-smoke" }, 10);
+  if (n === 0) {
+    break;
+  }
+}
+
+const [refreshed, refreshJob, seoCalls, checkJobsAfter] = await Promise.all([
+  client
+    .from("articles")
+    .select("status, slug, seo_title, seo_description")
+    .eq("id", article.id)
+    .single(),
+  client.from("jobs").select("status").eq("dedupe_key", seoRefreshDedupeKey(article.id)).single(),
+  client.from("llm_calls").select("ok").eq("story_id", storyId).eq("stage", "seo"),
+  client.from("jobs").select("status").eq("article_id", article.id).eq("type", "CHECK_ARTICLE"),
+]);
+
+for (const result of [refreshed, refreshJob, seoCalls, checkJobsAfter]) {
+  if (result.error) {
+    fail(result.error.message);
+  }
+}
+
+if (
+  refreshJob.data.status !== "done" ||
+  refreshed.data.status !== "review" ||
+  refreshed.data.slug !== reviewed.slug ||
+  !refreshed.data.seo_title ||
+  !refreshed.data.seo_description
+) {
+  fail(
+    `Odswiezenie SEO niezgodne z oczekiwaniem: ${JSON.stringify({ job: refreshJob.data, article: refreshed.data })}.`,
+  );
+}
+
+if ((seoCalls.data ?? []).length !== 2 || (checkJobsAfter.data ?? []).length !== 1) {
+  fail(
+    `Oczekiwano 2 wywolan seo i nadal 1 joba CHECK_ARTICLE, jest ${seoCalls.data?.length ?? 0}/${checkJobsAfter.data?.length ?? 0}.`,
+  );
+}
+
 await client.from("stories").delete().eq("id", storyId);
 await client.from("sources").delete().in("id", sourceIds);
 
-console.log("test:pipeline OK: kontrola jakosci -> artykul w review, 7 wywolan LLM w llm_calls.");
+console.log("test:pipeline OK: edycja tytulu -> odswiezone SEO bez zmiany sluga i bez nowego QA.");
 
 function escapeXml(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

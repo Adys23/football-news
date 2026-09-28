@@ -53,3 +53,26 @@ export function createLocalServiceClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/** Sesja redaktora z supabase/seed.sql - dla smoke testow sciezek przez RLS redaktora. */
+export async function createLocalEditorClient() {
+  const env = loadLocalEnv();
+
+  if (!env.url || !env.anonKey) {
+    fail("Brak API_URL lub ANON_KEY. Uruchom `npm run env:local`.");
+  }
+
+  const client = createClient(env.url, env.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await client.auth.signInWithPassword({
+    email: "edytor@local.test",
+    password: "edytor123",
+  });
+
+  if (error) {
+    fail(`Logowanie redaktora z seeda: ${error.message}`);
+  }
+
+  return client;
+}

@@ -23,13 +23,18 @@ insert into stories (id, title, status)
 select ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaab0' || n)::uuid, 'Historia webhooka ' || n, 'review'
 from generate_series(1, 4) as n;
 
-insert into articles (id, story_id, title, slug, lead, content, status, category_id, approved_by, updated_at)
+insert into articles (
+  id, story_id, title, slug, lead, seo_title, seo_description, content, status, category_id,
+  approved_by, updated_at
+)
 select
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbc0' || n)::uuid,
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaab0' || n)::uuid,
   'Artykul webhooka ' || n,
   'artykul-webhooka-' || n,
   'Lead artykulu.',
+  'Tytul SEO ' || n,
+  'Opis SEO artykulu testowego o przedluzeniu kontraktu zawodnika z klubem, ze szczegolami umowy i komentarzem trenera druzyny.',
   '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit."}]}',
   'review',
   '33333333-3333-4333-8333-333333333331',

@@ -30,7 +30,12 @@ import {
   type QaIssue,
   type SeoFieldCheck,
 } from "@/lib/admin/review";
-import { DECISION_STATUSES, publishBlockers } from "@/lib/admin/publish";
+import {
+  DECISION_STATUSES,
+  SEO_REFRESH_PENDING,
+  publishBlockers,
+  seoRefreshPending,
+} from "@/lib/admin/publish";
 import { getArticleForReview } from "@/lib/admin/review-data";
 import { requireRole } from "@/lib/auth/dal";
 
@@ -278,6 +283,11 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
 
       <section className="mt-12">
         <h2 className="text-lg font-semibold">SEO</h2>
+        {seoRefreshPending(article) ? (
+          <p className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+            {SEO_REFRESH_PENDING}
+          </p>
+        ) : null}
         <dl className="mt-4 space-y-3 text-sm">
           <SeoField
             label="Tytuł SEO"

@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(28);
+select plan(29);
 
 insert into stories (id, title, status)
 values
@@ -17,9 +17,12 @@ values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa94', 'Historia z twierdzeniami bez podparcia', 'review'),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa95', 'Historia odrzucana bez powodu', 'review'),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa96', 'Historia publikowana przez admina', 'review'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa97', 'Historia edytowana po ocenie', 'review');
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa97', 'Historia edytowana po ocenie', 'review'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa98', 'Historia bez metadanych SEO', 'review');
 
-insert into articles (id, story_id, title, slug, lead, content, status, category_id, updated_at)
+insert into articles (
+  id, story_id, title, slug, lead, content, status, category_id, seo_title, seo_description, updated_at
+)
 select
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb9' || n)::uuid,
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa9' || n)::uuid,
@@ -29,8 +32,10 @@ select
   '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit."}]}',
   'review',
   '33333333-3333-4333-8333-333333333331',
+  case when n = 8 then null else 'Tytul SEO ' || n end,
+  'Opis SEO artykulu testowego o przedluzeniu kontraktu zawodnika z klubem, ze szczegolami umowy i komentarzem trenera druzyny.',
   '2026-01-01 10:00:00+00'
-from generate_series(1, 7) as n;
+from generate_series(1, 8) as n;
 
 insert into article_scores (article_id, unsupported_claims, checked_at)
 values
@@ -240,6 +245,20 @@ select is(
   '22222222-2222-4222-8222-222222222222'::uuid,
   'artykul bez autora dostaje profil autora publikujacego'
 );
+
+-- === Brak metadanych SEO (0025) ===
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub": "11111111-1111-4111-8111-111111111112", "role": "authenticated"}', true);
+
+select throws_ok(
+  $$ select publish_article('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb98', '2026-01-01 10:00:00+00') $$,
+  '23502',
+  null,
+  'artykul bez tytulu SEO nie jest publikowany'
+);
+
+reset role;
 
 -- === Ocena sprzed edycji redaktora (sesja redaktora) ===
 

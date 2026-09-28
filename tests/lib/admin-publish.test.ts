@@ -6,6 +6,8 @@ import {
   parsePublishInput,
   parseRejectInput,
   publishBlockers,
+  SEO_REFRESH_PENDING,
+  seoRefreshPending,
   type PublishReadiness,
 } from "@/lib/admin/publish";
 
@@ -21,6 +23,7 @@ function ready(overrides: Partial<PublishReadiness> = {}): PublishReadiness {
     seoTitle: "Jan Kowalski przechodzi do Legii Warszawa",
     seoDescription:
       "Jan Kowalski podpisał kontrakt z Legią Warszawa do 2029 roku. Klub potwierdził transfer w oficjalnym komunikacie wydanym w poniedziałek rano.",
+    lastEditedAt: null,
     unsupportedClaims: 0,
     ...overrides,
   };
@@ -76,6 +79,26 @@ describe("publishBlockers", () => {
       "Tytuł SEO jest pusty albo poza limitem długości.",
       "Opis SEO jest pusty albo poza limitem długości.",
     ]);
+  });
+
+  it("po edycji tytułu lub leadu pokazuje odświeżanie SEO zamiast pustych pól", () => {
+    const edited = ready({
+      seoTitle: null,
+      seoDescription: null,
+      lastEditedAt: "2026-09-28T10:05:00+00:00",
+    });
+    expect(seoRefreshPending(edited)).toBe(true);
+    expect(publishBlockers(edited)).toEqual([SEO_REFRESH_PENDING]);
+  });
+
+  it("puste SEO bez edycji redaktora to zwykła blokada pól", () => {
+    const article = ready({ seoTitle: null, seoDescription: null });
+    expect(seoRefreshPending(article)).toBe(false);
+    expect(publishBlockers(article)).toEqual([
+      "Tytuł SEO jest pusty albo poza limitem długości.",
+      "Opis SEO jest pusty albo poza limitem długości.",
+    ]);
+    expect(seoRefreshPending(ready({ lastEditedAt: "2026-09-28T10:05:00+00:00" }))).toBe(false);
   });
 
   it("zbiera wszystkie blokady naraz", () => {
