@@ -341,8 +341,8 @@ Skalowanie: zwiększenie przepustowości polega na wywołaniu `process-jobs` cz�
 
 1. Redaktor akceptuje artykuł w `/admin`. Server action ustawia `status = 'published'`, `published_at`, `approved_by`.
 2. Trigger w bazie blokuje publikację bez `approved_by` i wpisuje zdarzenie do `audit_log`.
-3. Database Webhook Supabase wysyła zdarzenie na `POST /api/revalidate` z nagłówkiem `x-webhook-secret`.
-4. Route handler weryfikuje sekret i woła `revalidateTag` dla `articles`, `article:<slug>`, `category:<slug>` oraz `sitemap`.
+3. Trigger na `articles` (migracja 0022) wysyła przez `pg_net` zdarzenie na `POST /api/revalidate` z nagłówkiem `x-webhook-secret`. To własny trigger zamiast Database Webhooka z dashboardu, bo URL i sekret czyta z Supabase Vault (`revalidate_webhook_url`, `revalidate_webhook_secret`), a nie z definicji triggera w migracji. Żądanie wychodzi dopiero po commicie; brak konfiguracji albo błąd `pg_net` nie wycofuje publikacji.
+4. Route handler weryfikuje sekret (porównanie w stałym czasie), waliduje payload zodem i woła `revalidateTag(tag, { expire: 0 })` dla `articles`, `article:<slug>`, `category:<slug>` oraz `sitemap` - przy zmianie sluga lub kategorii także dla poprzednich wartości. Odpowiada `401`, `400` albo `200` bez szczegółów błędu.
 5. Strona artykułu renderuje się statycznie (ISR) i jest serwowana z CDN.
 
 Aktualizacja istniejącej historii nie tworzy nowego artykułu. Dopisuje wpis do `article_updates`, podnosi `updated_at`, unieważnia te same tagi. Na stronie pojawia się blok "Aktualizacja" z godziną - to jest realna dodatkowa wartość dla użytkownika i jednocześnie sygnał świeżości dla Discover.
