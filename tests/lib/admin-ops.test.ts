@@ -3,11 +3,17 @@ import {
   JOB_ERROR_PREVIEW_CHARS,
   jobTarget,
   jobTimeline,
+  latestErrorBySource,
   previewError,
   requeueErrorMessage,
   requeueJobInputSchema,
+  sourceHealth,
+  sourceToggleUpdate,
   toOpsJobs,
+  toSourceHealthItems,
+  toggleSourceInputSchema,
   type OpsJobRow,
+  type SourceHealthRow,
 } from "@/lib/admin/ops";
 
 const JOB_ID = "6f1c1f4e-3a52-4c1e-9d5e-0b9a3c2d1e0f";
@@ -111,5 +117,76 @@ describe("requeueErrorMessage", () => {
     expect(requeueErrorMessage({ code: "42501", message: "Tylko administrator" })).toBe(
       "Nie udało się ponowić joba: Tylko administrator",
     );
+  });
+});
+
+function source(overrides: Partial<SourceHealthRow>): SourceHealthRow {
+  return {
+    id: "s1",
+    name: "Legia",
+    type: "official_club",
+    trust_score: 1,
+    active: true,
+    consecutive_failures: 0,
+    last_checked_at: "2026-09-28T08:00:00Z",
+    last_success_at: "2026-09-28T08:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("sourceHealth", () => {
+  it("rozroznia breaker, reczne wylaczenie, bledy i zdrowe zrodlo", () => {
+    expect(sourceHealth({ active: false, consecutive_failures: 10 })).toBe("tripped");
+    expect(sourceHealth({ active: false, consecutive_failures: 2 })).toBe("disabled");
+    expect(sourceHealth({ active: true, consecutive_failures: 3 })).toBe("degraded");
+    expect(sourceHealth({ active: true, consecutive_failures: 0 })).toBe("ok");
+  });
+});
+
+describe("latestErrorBySource", () => {
+  it("bierze pierwszy (najnowszy) blad kazdego zrodla i pomija puste", () => {
+    const errors = latestErrorBySource([
+      { source_id: "s1", error: "HTTP 503" },
+      { source_id: "s1", error: "stary" },
+      { source_id: null, error: "bez zrodla" },
+      { source_id: "s2", error: null },
+    ]);
+    expect([...errors]).toEqual([["s1", "HTTP 503"]]);
+  });
+});
+
+describe("toSourceHealthItems", () => {
+  it("stawia problemy na gorze i pokazuje blad tylko przy problemie", () => {
+    const items = toSourceHealthItems(
+      [
+        source({ id: "a", name: "Zdrowe" }),
+        source({ id: "b", name: "Breaker", active: false, consecutive_failures: 10 }),
+        source({ id: "c", name: "Awaryjne", consecutive_failures: 1 }),
+      ],
+      new Map([
+        ["b", "HTTP 404"],
+        ["a", "stary blad sprzed naprawy"],
+      ]),
+    );
+    expect(items.map((item) => [item.id, item.health, item.lastError])).toEqual([
+      ["b", "tripped", "HTTP 404"],
+      ["c", "degraded", null],
+      ["a", "ok", null],
+    ]);
+  });
+});
+
+describe("toggleSourceInputSchema i sourceToggleUpdate", () => {
+  it("parsuje docelowy stan z formularza", () => {
+    expect(toggleSourceInputSchema.parse({ sourceId: JOB_ID, active: "true" }).active).toBe(true);
+    expect(toggleSourceInputSchema.parse({ sourceId: JOB_ID, active: "false" }).active).toBe(false);
+    expect(toggleSourceInputSchema.safeParse({ sourceId: JOB_ID, active: "tak" }).success).toBe(
+      false,
+    );
+  });
+
+  it("wlaczenie zeruje licznik bledow, wylaczenie go nie rusza", () => {
+    expect(sourceToggleUpdate(true)).toEqual({ active: true, consecutive_failures: 0 });
+    expect(sourceToggleUpdate(false)).toEqual({ active: false });
   });
 });
