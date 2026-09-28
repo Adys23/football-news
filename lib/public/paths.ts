@@ -45,6 +45,20 @@ export function isReservedPathSegment(slug: string): boolean {
   return RESERVED_PATH_SEGMENTS.includes(slug);
 }
 
+/** Adres artykulu prowadzi do strony artykulu, a nie do 404 ani innej trasy. */
+export function isReachableArticle(article: {
+  slug: string;
+  categorySlug: string | null;
+}): boolean {
+  const { slug, categorySlug } = article;
+  if (!isValidSlug(slug)) {
+    return false;
+  }
+  return (
+    categorySlug === null || (isValidSlug(categorySlug) && !isReservedPathSegment(categorySlug))
+  );
+}
+
 /** Profil zawodnika: /zawodnicy/<slug> (docs/architecture.md §4). */
 export function playerPath(playerSlug: string): string {
   return `/zawodnicy/${playerSlug}`;

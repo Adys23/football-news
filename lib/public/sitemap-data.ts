@@ -2,7 +2,7 @@ import "server-only";
 
 import { CACHE_TAGS } from "@/lib/public/cache-tags";
 import { createPublicClient } from "@/lib/public/client";
-import { isReservedPathSegment, isValidSlug } from "@/lib/public/paths";
+import { isReachableArticle, isReservedPathSegment, isValidSlug } from "@/lib/public/paths";
 import { latestDate, newsQueryCutoff, NEWS_SITEMAP_URL_LIMIT } from "@/lib/public/xml-feeds";
 
 /**
@@ -41,10 +41,7 @@ const SITEMAP_ARTICLE_COLUMNS = "id, slug, title, published_at, updated_at, cate
 /** Artykul trafia do sitemapy tylko wtedy, gdy jego adres nie konczy sie 404. */
 function toSitemapArticle(row: SitemapArticleRow): SitemapArticle | null {
   const categorySlug = row.categories?.slug ?? null;
-  if (!row.published_at || !isValidSlug(row.slug)) return null;
-  if (categorySlug !== null && (!isValidSlug(categorySlug) || isReservedPathSegment(categorySlug))) {
-    return null;
-  }
+  if (!row.published_at || !isReachableArticle({ slug: row.slug, categorySlug })) return null;
   return {
     slug: row.slug,
     categorySlug,
