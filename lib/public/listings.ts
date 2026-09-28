@@ -18,6 +18,13 @@ import { isValidSlug } from "@/lib/public/paths";
 export const LISTING_LIMIT = 30;
 
 /**
+ * Nawigacja jest w layoucie kazdej strony publicznej, a Next.js bierze najnizszy
+ * `revalidate` na stronie - z 60 s profile (3600 s) odswiezalyby sie co minute.
+ * Kategorie zmieniaja sie rzadko, a tag `articles` i tak odswieza je po publikacji.
+ */
+const NAVIGATION_REVALIDATE_SECONDS = 3600;
+
+/**
  * Najnowsze opublikowane artykuly. Filtr statusu dublujemy mimo RLS
  * (patrz lib/public/queries.ts).
  */
@@ -38,7 +45,7 @@ export async function getLatestArticles(limit: number = LISTING_LIMIT): Promise<
 
 /** Kategorie w nawigacji serwisu: tylko glowne, w kolejnosci redakcji. */
 export async function getNavigationCategories(): Promise<PublicCategory[]> {
-  const supabase = createPublicClient([CACHE_TAGS.articles]);
+  const supabase = createPublicClient([CACHE_TAGS.articles], NAVIGATION_REVALIDATE_SECONDS);
   const { data, error } = await supabase
     .from("categories")
     .select(CATEGORY_COLUMNS)

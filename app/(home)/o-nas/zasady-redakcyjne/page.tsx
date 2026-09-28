@@ -23,8 +23,8 @@ const SECTIONS: readonly { id: string; title: string; paragraphs: readonly strin
     id: "akceptacja-redaktora",
     title: "Akceptacja redaktora",
     paragraphs: [
-      "Żaden tekst nie trafia na stronę bez akceptacji redaktora. Zasada jest wymuszona technicznie: system nie pozwala opublikować artykułu, którego nie zatwierdził człowiek z redakcji. Tekst z twierdzeniem, którego nie potwierdzają zebrane fakty, nie może zostać opublikowany.",
-      "Autorem każdego opublikowanego artykułu jest konkretna osoba z redakcji, podpisana imieniem i nazwiskiem.",
+      "Żaden tekst nie trafia na stronę bez akceptacji redaktora. Zasada jest wymuszona technicznie: system nie pozwala opublikować artykułu, którego nie zatwierdził człowiek z redakcji. Tekstu, w którym automatyczna kontrola wykryła twierdzenie niepotwierdzone zebranymi faktami, nie da się opublikować.",
+      "Za publikację każdego artykułu odpowiada redaktor, który go zatwierdził. Gdy tekst ma autora z redakcji, jest on podpisany pod artykułem imieniem i nazwiskiem.",
     ],
   },
   {
