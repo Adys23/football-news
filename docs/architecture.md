@@ -158,7 +158,10 @@ Widok recenzji (`app/admin/artykuly/[id]/page.tsx`, dane w `lib/admin/review-dat
 - limity pól SEO pochodzą z `seoOutputSchema`; wartość spoza zakresu jest wyróżniona,
 - linki do materiałów źródłowych tylko dla adresów `http(s)`.
 
-Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `saveArticleMeta` w `app/admin/artykuly/[id]/actions.ts`) jest dostępna tylko dla artykułów `review`:
+Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `saveArticleMeta`) oraz treści (`components/admin/BlockEditor.tsx`, server action `saveArticleContent`, obie w `app/admin/artykuly/[id]/actions.ts`) jest dostępna tylko dla artykułów `review`:
+
+- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty i listy; w ramce z faktami zmienia tylko tytuł. Zdjęcie można tylko zachować albo usunąć, a nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów (`editRuleIssues`), bo kontrola kopiowania pomija cytaty,
+- treść waliduje `articleContentSchema` z komunikatami po polsku: w edytorze informacyjnie, w server action jako warunek zapisu,
 
 - przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
 - zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ARTICLE_NOT_FOUND,
+  editRuleIssues,
+  MAX_QUOTE_WORDS,
+  parseArticleContentEdit,
   parseArticleMetaEdit,
   saveErrorMessage,
   scoresAreStale,
@@ -100,5 +103,75 @@ describe("scoresAreStale", () => {
 
   it("edycja przed ponowna ocena nie oznacza nieaktualnej oceny", () => {
     expect(scoresAreStale(CHECKED_AT, "2026-09-28T08:30:00Z")).toBe(false);
+  });
+});
+
+const IMAGE_ID = "cccccccc-cccc-4ccc-8ccc-ccccccccccc1";
+const CONTENT = {
+  version: 1,
+  blocks: [
+    { type: "paragraph", text: "Pomocnik przedluzyl umowe." },
+    { type: "image", imageId: IMAGE_ID, caption: "Bruno Fernandes" },
+  ],
+};
+
+describe("parseArticleContentEdit", () => {
+  const target = { articleId: ARTICLE_ID, expectedUpdatedAt: UPDATED_AT };
+
+  it("przyjmuje tresc zgodna z articleContentSchema", () => {
+    const result = parseArticleContentEdit(form({ ...target, content: JSON.stringify(CONTENT) }));
+    expect(result).toEqual({ ok: true, data: { ...target, content: CONTENT } });
+  });
+
+  it("wskazuje blok, ktory nie przechodzi schematu", () => {
+    const broken = {
+      version: 1,
+      blocks: [CONTENT.blocks[0], { type: "list", style: "bullet", items: ["jeden"] }],
+    };
+    const result = parseArticleContentEdit(form({ ...target, content: JSON.stringify(broken) }));
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.state.issues?.[0]).toMatch(/^Blok 2 \(items\):/);
+  });
+
+  it("odrzuca tresc, ktora nie jest JSON-em", () => {
+    const result = parseArticleContentEdit(form({ ...target, content: "{" }));
+    expect(!result.ok && result.state.message).toBe("Treść nie przechodzi walidacji schematu.");
+  });
+
+  it("odrzuca formularz bez id artykulu", () => {
+    const result = parseArticleContentEdit(form({ content: JSON.stringify(CONTENT) }));
+    expect(!result.ok && result.state.message).toBe("Formularz jest niekompletny.");
+  });
+});
+
+describe("editRuleIssues", () => {
+  const image = { type: "image", imageId: IMAGE_ID, caption: "Bruno Fernandes" } as const;
+  const text = { type: "paragraph", text: "Tekst." } as const;
+  const quote = { type: "quote", text: "Zostaje w klubie.", attribution: "Trener" } as const;
+
+  it("pozwala zachowac, przesunac albo usunac zdjecie", () => {
+    expect(editRuleIssues([text, image], [image, text])).toEqual([]);
+    expect(editRuleIssues([text, image], [text])).toEqual([]);
+  });
+
+  it("blokuje nowe zdjecie, zmiane podpisu i powielenie", () => {
+    const other = { ...image, imageId: "cccccccc-cccc-4ccc-8ccc-ccccccccccc2" };
+    for (const after of [[other], [{ ...image, caption: "Inny podpis" }], [image, image]]) {
+      expect(editRuleIssues([image], after)).toEqual(["Zdjęcie można tylko zachować albo usunąć."]);
+    }
+  });
+
+  it("wymaga autora i limitu slow tylko od nowego albo zmienionego cytatu", () => {
+    const orphan = { type: "quote", text: "Cytat bez autora." } as const;
+    const long = { ...quote, text: "slowo ".repeat(MAX_QUOTE_WORDS + 1) };
+    expect(editRuleIssues([orphan], [orphan, quote])).toEqual([]);
+    expect(editRuleIssues([], [orphan])).toHaveLength(1);
+    expect(editRuleIssues([quote], [long])).toHaveLength(1);
+    expect(editRuleIssues([], [{ ...quote, attribution: " " }])).toHaveLength(1);
+  });
+
+  it("nie traktuje przycietego, nietknietego cytatu jako zmiany", () => {
+    const padded = { type: "quote", text: "Cytat bez autora. " } as const;
+    expect(editRuleIssues([padded], [{ ...padded, text: "Cytat bez autora." }])).toEqual([]);
   });
 });

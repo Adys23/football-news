@@ -8,6 +8,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ArticleForEdit {
   storyId: string;
+  title: string;
+  lead: string | null;
   content: Json;
 }
 
@@ -15,14 +17,16 @@ export async function getArticleForEdit(id: string): Promise<ArticleForEdit | nu
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("articles")
-    .select("story_id, content")
+    .select("story_id, title, lead, content")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
     throw new Error(`Nie udalo sie odczytac artykulu do edycji: ${error.message}`);
   }
-  return data ? { storyId: data.story_id, content: data.content } : null;
+  return data
+    ? { storyId: data.story_id, title: data.title, lead: data.lead, content: data.content }
+    : null;
 }
 
 export type EditCheckResult = { ok: true; issues: string[] } | { ok: false; message: string };
@@ -33,16 +37,16 @@ export type EditCheckResult = { ok: true; issues: string[] } | { ok: false; mess
  * Loadery pipeline'u dzialaja tu na sesji redaktora, wiec obowiazuje RLS.
  */
 export async function checkArticleEdit(
-  article: ArticleForEdit,
-  edit: { title: string; lead: string },
+  storyId: string,
+  edit: { title: string; lead: string; content: Json },
 ): Promise<EditCheckResult> {
-  const content = articleContentSchema.safeParse(article.content);
+  const content = articleContentSchema.safeParse(edit.content);
   if (!content.success) {
     return { ok: false, message: "Treść artykułu nie przechodzi walidacji schematu." };
   }
 
   const ctx = { client: await createSupabaseServerClient() };
-  const approved = await loadApprovedFacts(ctx, article.storyId);
+  const approved = await loadApprovedFacts(ctx, storyId);
   if (!approved) {
     return {
       ok: false,

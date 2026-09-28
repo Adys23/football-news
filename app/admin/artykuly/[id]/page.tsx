@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleMetaForm } from "@/components/admin/ArticleMetaForm";
+import { BlockEditor } from "@/components/admin/BlockEditor";
 import { BlockRenderer } from "@/components/article/BlockRenderer";
 import { FactTable } from "@/components/admin/FactTable";
 import { ScoreBadge } from "@/components/admin/ScoreBadge";
@@ -157,6 +158,19 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
             title={article.title}
             lead={article.lead ?? ""}
           />
+          <h3 className="mt-8 font-semibold">Treść</h3>
+          {content.ok ? (
+            <BlockEditor
+              articleId={article.id}
+              updatedAt={article.updatedAt}
+              blocks={content.content.blocks}
+              factStatements={Object.fromEntries(factStatementsById(article.facts))}
+            />
+          ) : (
+            <p className="mt-2 text-sm text-neutral-600">
+              Treść spoza schematu nie może być edytowana w panelu.
+            </p>
+          )}
         </section>
       ) : null}
 
