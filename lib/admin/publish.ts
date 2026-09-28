@@ -136,7 +136,7 @@ const DECISION_ERROR_MESSAGES = new Map([
   ["55000", "Artykuł nie jest już w recenzji. Odśwież stronę."],
   ["P0002", "Artykuł nie istnieje."],
   ["42501", "Brak uprawnień do publikacji i odrzucania artykułów."],
-  ["23502", "Artykuł nie ma leadu, kategorii albo treści."],
+  ["23502", "Artykuł nie ma leadu, kategorii, treści albo metadanych SEO."],
   ["22023", STALE_SCORE_CONFIRMATION_MESSAGE],
   ["23514", "Baza zablokowała publikację: tekst zawiera twierdzenia bez podparcia w faktach."],
   ["22001", `Powód może mieć najwyżej ${MAX_REJECT_REASON_LENGTH} znaków.`],

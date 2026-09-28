@@ -40,10 +40,12 @@ begin
   -- complete_job, a wtedy konflikt klucza zgubilby odswiezenie. Odpiety od klucza nie
   -- blokuje nowego joba. Jego zapis warunkowy nie przejdzie (tytul lub lead sie zmienil),
   -- a ponowienie bez klucza odswiezenia konczy sie w handlerze bez pracy.
+  -- Martwy job odpinamy z tego samego powodu: indeks unikalny go pomija, ale requeue_dead_job
+  -- przywrocilby go do queued obok nowego joba z tym kluczem i skonczyl sie bledem 23505.
   update public.jobs
   set dedupe_key = null
   where dedupe_key = v_dedupe_key
-    and status = 'running';
+    and status in ('running', 'dead');
 
   -- Insert jak w enqueue_job (0012). Tamta funkcja nie ma wlasnego search_path i przy
   -- pustej sciezce tej funkcji nie znalazlaby tabeli jobs.
@@ -140,3 +142,81 @@ $$;
 
 revoke all on function save_article_edit(uuid, timestamptz, text, text, jsonb) from public, anon;
 grant execute on function save_article_edit(uuid, timestamptz, text, text, jsonb) to authenticated;
+
+-- Po edycji tytulu lub leadu SEO jest puste, dopoki job go nie odswiezy. Panel blokuje wtedy
+-- Publikuj (publishBlockers), a baza odrzuca publikacje z pustym SEO tak samo jak bez leadu
+-- (23502), zeby wywolanie RPC z pominieciem panelu nie opublikowalo artykulu bez metadanych.
+-- Logika z 0021 bez zmian poza tym warunkiem.
+create or replace function publish_article(
+  p_article_id uuid,
+  p_expected_updated_at timestamptz,
+  p_confirm_stale_score boolean default false
+) returns timestamptz
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_story_id uuid;
+  v_ready boolean;
+  v_stale_score boolean;
+  v_published_at timestamptz;
+begin
+  v_story_id := public.lock_article_for_decision(p_article_id, p_expected_updated_at);
+
+  -- blocks jest zawsze tablica (articles_content_has_blocks).
+  select coalesce(btrim(lead), '') <> ''
+    and category_id is not null
+    and jsonb_array_length(content -> 'blocks') > 0
+    and coalesce(btrim(seo_title), '') <> ''
+    and coalesce(btrim(seo_description), '') <> ''
+  into v_ready
+  from public.articles
+  where id = p_article_id;
+
+  if v_ready is not true then
+    raise exception 'Artykul % nie ma leadu, kategorii, tresci albo metadanych SEO', p_article_id
+      using errcode = 'not_null_violation';
+  end if;
+
+  select exists (
+    select 1
+    from public.article_revisions r
+    join public.article_scores s on s.article_id = r.article_id
+    where r.article_id = p_article_id
+      and r.edited_by is not null
+      and r.created_at > s.checked_at
+  )
+  into v_stale_score;
+
+  if v_stale_score and p_confirm_stale_score is not true then
+    raise exception 'Ocena artykulu % jest sprzed edycji redaktora, publikacja wymaga potwierdzenia', p_article_id
+      using errcode = 'invalid_parameter_value';
+  end if;
+
+  if v_stale_score then
+    perform set_config('app.status_change_reason', 'Publikacja z ocena automatyczna sprzed edycji redaktora', true);
+  end if;
+
+  update public.articles
+  set status = 'published',
+      approved_by = auth.uid(),
+      published_at = coalesce(published_at, now()),
+      author_id = coalesce(
+        author_id,
+        (select a.id from public.authors a where a.profile_id = auth.uid() order by a.created_at limit 1)
+      )
+  where id = p_article_id
+  returning published_at into v_published_at;
+
+  perform set_config('app.status_change_reason', '', true);
+
+  update public.stories
+  set status = 'published'
+  where id = v_story_id;
+
+  return v_published_at;
+end;
+$$;
+
+revoke all on function publish_article(uuid, timestamptz, boolean) from public, anon;
+grant execute on function publish_article(uuid, timestamptz, boolean) to authenticated;

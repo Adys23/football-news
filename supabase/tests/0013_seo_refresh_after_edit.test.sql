@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(18);
+select plan(20);
 
 insert into stories (id, title, status)
 values
@@ -225,6 +225,38 @@ select is(
   ),
   'queued:GENERATE_SEO:refresh:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01, running:-',
   'job w toku zostaje odpiety od klucza, nowy czeka w kolejce'
+);
+
+-- Martwy job odswiezenia trzyma klucz poza indeksem unikalnym. Bez odpiecia requeue
+-- przywrocilby go obok nowego joba z tym samym kluczem i skonczyl sie bledem 23505.
+update jobs
+set status = 'dead'
+where article_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01'
+  and type = 'GENERATE_SEO'
+  and status = 'queued';
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub": "11111111-1111-4111-8111-111111111112", "role": "authenticated"}', true);
+
+select lives_ok(
+  format(
+    $$ select save_article_edit(
+         'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01',
+         %L,
+         'Bruno Fernandes zostaje w Manchesterze United do 2029 roku',
+         'Lead redaktora.',
+         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+       ) $$,
+    (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01')
+  ),
+  'redaktor zmienia tytul, gdy poprzednie odswiezenie jest martwe'
+);
+
+reset role;
+
+select lives_ok(
+  $$ select requeue_dead_jobs('GENERATE_SEO') $$,
+  'martwy job odswiezenia wraca do kolejki bez konfliktu klucza'
 );
 
 -- === Sesja czytelnika ===
