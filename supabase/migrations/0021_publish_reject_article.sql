@@ -13,6 +13,7 @@
 --   55000 - artykul nie jest w statusie review ani approved,
 --   40001 - ktos zmienil artykul po otwarciu widoku (p_expected_updated_at),
 --   23502 - publikacja bez leadu, kategorii albo tresci,
+--   22023 - ocena automatyczna jest sprzed edycji redaktora, a publikacja nie ma potwierdzenia,
 --   22001 - powod odrzucenia dluzszy niz 500 znakow.
 
 -- Powod decyzji przekazuje do triggera ustawienie transakcyjne app.status_change_reason.
@@ -136,9 +137,14 @@ grant execute on function lock_article_for_decision(uuid, timestamptz) to authen
 
 -- Autorem publikowanego tekstu jest realna osoba z redakcji: gdy pipeline nie przypisal
 -- autora, zostaje nim profil autora redaktora, ktory publikuje (o ile go ma).
+--
+-- Edycja redaktora nie uruchamia ponownie oceny modelu, wiec article_scores moze dotyczyc
+-- wersji sprzed edycji. Wtedy publikacja wymaga jawnego potwierdzenia (p_confirm_stale_score),
+-- a audit_log dostaje powod z informacja, ze ocena byla nieaktualna.
 create or replace function publish_article(
   p_article_id uuid,
-  p_expected_updated_at timestamptz
+  p_expected_updated_at timestamptz,
+  p_confirm_stale_score boolean default false
 ) returns timestamptz
 language plpgsql
 set search_path = ''
@@ -146,6 +152,7 @@ as $$
 declare
   v_story_id uuid;
   v_ready boolean;
+  v_stale_score boolean;
   v_published_at timestamptz;
 begin
   v_story_id := public.lock_article_for_decision(p_article_id, p_expected_updated_at);
@@ -163,6 +170,25 @@ begin
       using errcode = 'not_null_violation';
   end if;
 
+  select exists (
+    select 1
+    from public.article_revisions r
+    join public.article_scores s on s.article_id = r.article_id
+    where r.article_id = p_article_id
+      and r.edited_by is not null
+      and r.created_at > s.checked_at
+  )
+  into v_stale_score;
+
+  if v_stale_score and p_confirm_stale_score is not true then
+    raise exception 'Ocena artykulu % jest sprzed edycji redaktora, publikacja wymaga potwierdzenia', p_article_id
+      using errcode = 'invalid_parameter_value';
+  end if;
+
+  if v_stale_score then
+    perform set_config('app.status_change_reason', 'Publikacja z ocena automatyczna sprzed edycji redaktora', true);
+  end if;
+
   update public.articles
   set status = 'published',
       approved_by = auth.uid(),
@@ -174,6 +200,8 @@ begin
   where id = p_article_id
   returning published_at into v_published_at;
 
+  perform set_config('app.status_change_reason', '', true);
+
   update public.stories
   set status = 'published'
   where id = v_story_id;
@@ -182,8 +210,8 @@ begin
 end;
 $$;
 
-revoke all on function publish_article(uuid, timestamptz) from public, anon;
-grant execute on function publish_article(uuid, timestamptz) to authenticated;
+revoke all on function publish_article(uuid, timestamptz, boolean) from public, anon;
+grant execute on function publish_article(uuid, timestamptz, boolean) to authenticated;
 
 create or replace function reject_article(
   p_article_id uuid,
