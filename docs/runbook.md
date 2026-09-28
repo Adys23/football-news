@@ -94,10 +94,22 @@ Objaw: historie nie dochodzą do redaktora.
 
 ## 8. Publikacja nie pojawia się na stronie
 
+Dotyczy też sytuacji odwrotnej: artykuł wycofany (`archived`) albo poprawiony, a strona pokazuje starą wersję.
+
 1. Sprawdź, czy `articles.status = 'published'` i czy jest `published_at`.
-2. Sprawdź logi webhooka i odpowiedź `/api/revalidate` - najczęstsza przyczyna to niezgodny `REVALIDATE_WEBHOOK_SECRET`.
-3. Wywołaj unieważnienie ręcznie dla tagów `articles` i `article:<slug>`.
-4. Jeśli strona jest, ale nie ma jej w sitemapie, sprawdź unieważnienie tagu `sitemap`.
+2. Sprawdź odpowiedź webhooka w bazie: `select status_code, content, error_msg, created from net._http_response order by created desc limit 5;`. `401` to niezgodny `REVALIDATE_WEBHOOK_SECRET` (Next.js) i `revalidate_webhook_secret` (Vault), `400` to payload niezgodny z kontraktem, `error_msg` z timeoutem to zły `revalidate_webhook_url`. Pusta tabela przy publikacji oznacza brak `pg_net` albo sekretów w Vault (`select name from vault.secrets where name like 'revalidate_webhook_%';`).
+3. Ustaw lub popraw sekrety w Vault (SQL jako `postgres`). Sekret musi być równy `REVALIDATE_WEBHOOK_SECRET` w środowisku Next.js:
+   - nowe: `select vault.create_secret('https://<strona>/api/revalidate', 'revalidate_webhook_url');` i `select vault.create_secret('<sekret>', 'revalidate_webhook_secret');`,
+   - zmiana: `select vault.update_secret((select id from vault.secrets where name = 'revalidate_webhook_secret'), '<sekret>');`.
+4. Unieważnij cache ręcznie tym samym webhookiem:
+   ```bash
+   curl -sS -X POST "https://<strona>/api/revalidate" \
+     -H "Content-Type: application/json" \
+     -H "x-webhook-secret: $REVALIDATE_WEBHOOK_SECRET" \
+     -d '{"event":"update","slug":"<slug>","category_slug":"<slug-kategorii>"}'
+   ```
+   Odpowiedź `{"revalidated":true}` unieważnia `articles`, `sitemap`, `article:<slug>` i `category:<slug-kategorii>`. Po zmianie sluga dodaj `"previous_slug":"<stary>"`, po zmianie kategorii `"previous_category_slug":"<stara>"`.
+5. Jeśli strona jest, ale nie ma jej w sitemapie, sprawdź, czy sitemapa taguje zapytanie `sitemap` - webhook zawsze unieważnia ten tag.
 
 ---
 
@@ -107,7 +119,7 @@ Nie robimy tego bez potrzeby. Gdy trzeba:
 
 1. Dopisz stary slug do `article_redirects`.
 2. Zmień `slug` w `articles`.
-3. Unieważnij tagi `article:<stary>`, `article:<nowy>` i `sitemap`.
+3. Tagi `article:<stary>`, `article:<nowy>` i `sitemap` unieważnia webhook publikacji (payload z `previous_slug`). Jeśli nie zadziałał, wywołaj go ręcznie jak w sekcji 8, krok 4.
 4. Sprawdź, że stary adres zwraca 301 na nowy.
 
 ---
