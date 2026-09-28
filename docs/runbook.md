@@ -27,7 +27,7 @@ Objaw: joby ze statusem `dead` w dashboardzie.
 1. `npm run jobs:status` - zobacz rozkład po typie i powodzie.
 2. Jeden typ joba dominuje: problem jest w handlerze albo w kontrakcie wyjścia modelu. Sprawdź `llm_calls` z `ok = false` dla tego etapu.
 3. Rozkład jest równomierny: podejrzewaj awarię zewnętrzną (API modelu, limity, sieć) albo wyczerpany budżet.
-4. Po naprawie: `npm run job:replay -- <id>` dla pojedynczego przypadku, a dla całej grupy `requeue_dead_jobs()` z filtrem po typie.
+4. Po naprawie: `npm run job:replay -- <id>` albo `select requeue_dead_job('<id>')` z sesji admina dla pojedynczego przypadku, a dla całej grupy `requeue_dead_jobs()` z filtrem po typie (tylko `service_role` lub SQL jako `postgres`).
 5. Jeśli przyczyną był nieprawidłowy JSON z modelu, dopisz przypadek do testów kontraktów przed powtórnym uruchomieniem.
 
 Nie zwiększaj `max_attempts`, żeby "przepchnąć" joby. Trzy próby to celowy limit; problem jest po stronie przyczyny, nie liczby prób.

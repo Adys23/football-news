@@ -1,10 +1,13 @@
 -- seed.sql
 -- Dane startowe dla srodowiska lokalnego. Uruchamiane przez `supabase db reset`.
 --
--- Konto redakcyjne: redaktor@local.test / redaktor123 (tylko lokalnie).
+-- Konta redakcyjne (tylko lokalnie):
+--   redaktor@local.test / redaktor123 - admin
+--   edytor@local.test / edytor123 - editor
+--   czytelnik@local.test / czytelnik123 - viewer (loguje sie, ale nie ma dostepu do panelu)
 -- Identyfikatory sa deterministyczne, zeby testy mogly sie do nich odwolywac.
 
--- === Konto redakcji ===
+-- === Konta redakcji ===
 
 insert into auth.users (
   instance_id,
@@ -36,6 +39,53 @@ insert into auth.users (
   false
 ) on conflict (id) do nothing;
 
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  is_sso_user,
+  is_anonymous
+) values
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '11111111-1111-4111-8111-111111111112',
+    'authenticated',
+    'authenticated',
+    'edytor@local.test',
+    extensions.crypt('edytor123', extensions.gen_salt('bf')),
+    now(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"display_name": "Edytor Lokalny"}'::jsonb,
+    now(),
+    now(),
+    false,
+    false
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '11111111-1111-4111-8111-111111111113',
+    'authenticated',
+    'authenticated',
+    'czytelnik@local.test',
+    extensions.crypt('czytelnik123', extensions.gen_salt('bf')),
+    now(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"display_name": "Czytelnik Lokalny"}'::jsonb,
+    now(),
+    now(),
+    false,
+    false
+  )
+on conflict (id) do nothing;
+
 insert into auth.identities (
   user_id,
   identity_data,
@@ -58,8 +108,39 @@ insert into auth.identities (
   now()
 ) on conflict (provider, provider_id) do nothing;
 
+insert into auth.identities (
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+) values
+  (
+    '11111111-1111-4111-8111-111111111112',
+    jsonb_build_object('sub', '11111111-1111-4111-8111-111111111112', 'email', 'edytor@local.test', 'email_verified', true),
+    'email',
+    'edytor@local.test',
+    now(),
+    now(),
+    now()
+  ),
+  (
+    '11111111-1111-4111-8111-111111111113',
+    jsonb_build_object('sub', '11111111-1111-4111-8111-111111111113', 'email', 'czytelnik@local.test', 'email_verified', true),
+    'email',
+    'czytelnik@local.test',
+    now(),
+    now(),
+    now()
+  )
+on conflict (provider, provider_id) do nothing;
+
 insert into profiles (id, email, display_name, role) values
-  ('11111111-1111-4111-8111-111111111111', 'redaktor@local.test', 'Redaktor Lokalny', 'admin')
+  ('11111111-1111-4111-8111-111111111111', 'redaktor@local.test', 'Redaktor Lokalny', 'admin'),
+  ('11111111-1111-4111-8111-111111111112', 'edytor@local.test', 'Edytor Lokalny', 'editor'),
+  ('11111111-1111-4111-8111-111111111113', 'czytelnik@local.test', 'Czytelnik Lokalny', 'viewer')
 on conflict (id) do nothing;
 
 insert into authors (id, profile_id, name, slug, role_title, bio) values
