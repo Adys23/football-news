@@ -89,6 +89,8 @@ Automatyczne wywołanie (opis z terminami wyzwalającymi) dla `add-source`, `pip
 | `capture-fixture` | Zapis realnej odpowiedzi źródła do fixtures, z usunięciem nagłówków wrażliwych i normalizacją daty                                                     | `capture.mjs`                             |
 | `seo-audit`       | Audyt opublikowanego artykułu: metadane, `canonical`, JSON-LD `NewsArticle`, obraz od 1200 px i 16:9, tytuł wobec listy zakazanej, długość opisu       | `audit-article.mjs`                       |
 
+Wyjątek od lokalizacji: `.claude/skills/steward/SKILL.md`. Czyta go agent Claude Code, który pilnuje pull requestu (czerwone CI, konflikty z `main`, komentarze z review), i szuka go właśnie pod tą ścieżką. Skill nie wprowadza nowych zasad - wskazuje, jak odtworzyć każdy job CI lokalnie, jak naprawiać typowe czerwone bramki (typy bazy, migracje, wersje promptów, progi pokrycia), jak rozwiązywać konflikty i które prośby z review wymagają decyzji właściciela.
+
 Wymagania na skille w tym repo: `SKILL.md` poniżej 500 linii, opis w trzeciej osobie z terminami wyzwalającymi, spójna terminologia zgodna z [docs/glossary.md](glossary.md), odnośniki do plików jeden poziom w głąb, ścieżki w stylu POSIX.
 
 ---

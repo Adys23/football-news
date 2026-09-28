@@ -1408,7 +1408,23 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      lock_article_for_decision: {
+        Args: { p_article_id: string; p_expected_updated_at: string };
+        Returns: string;
+      };
       normalize_title: { Args: { p_title: string }; Returns: string };
+      publish_article: {
+        Args: {
+          p_article_id: string;
+          p_confirm_stale_score?: boolean;
+          p_expected_updated_at: string;
+        };
+        Returns: string;
+      };
+      reject_article: {
+        Args: { p_article_id: string; p_expected_updated_at: string; p_reason?: string };
+        Returns: undefined;
+      };
       requeue_dead_job: { Args: { p_job_id: string }; Returns: boolean };
       requeue_dead_jobs: {
         Args: { p_type?: Database["public"]["Enums"]["job_type"] };
@@ -1425,6 +1441,7 @@ export type Database = {
         };
         Returns: string;
       };
+      send_revalidate_webhook: { Args: { p_payload: Json }; Returns: undefined };
       title_contains_label: { Args: { p_label: string; p_title: string }; Returns: boolean };
     };
     Enums: {

@@ -145,7 +145,7 @@ Panel `/admin`: dashboard z licznikami, kolejka do weryfikacji sortowana po `imp
 
 Dashboard (`app/admin/page.tsx`, dane w `lib/admin/dashboard-data.ts`) czyta wyłącznie na sesji redaktora, przez RLS:
 
-- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), gotowe do publikacji (`approved`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
+- liczniki: nowe historie (`stories.first_seen_at` z ostatnich 24 h), do weryfikacji (`articles.status = 'review'`), opublikowane dziś (`published_at` od północy w `Europe/Warsaw`),
 - kolejka do weryfikacji: artykuły `review` posortowane po `stories.importance`, potem `story_assessments.confidence`, a przy remisie wyżej ten, który dłużej czeka. Po wadze sortuje już baza, przed limitem 200 pozycji; po pewności z zagnieżdżonej oceny PostgREST sortować nie umie, więc robi to kod. Gdy kolejka jest dłuższa niż limit, panel pokazuje „Pokazano X z Y”,
 - sekcja „Pilne”: historie z `importance >= 80` w statusach od `new` do `approved`, aktualizowane w ciągu doby. Próg to `HIGH_IMPORTANCE` z `_shared/lib/taxonomy.ts` (ten sam eskaluje model), a nie wpis w `settings`, bo `settings` jest widoczne tylko dla admina.
 
@@ -167,6 +167,12 @@ Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `s
 - zapis idzie przez `save_article_edit` z `updated_at`, które redaktor widział. Funkcja w jednej transakcji zapisuje rewizję i artykuł, a kody błędów zamienia na komunikaty `lib/admin/article-edit.ts`,
 - gdy ostatnia rewizja redaktora jest późniejsza niż `article_scores.checked_at`, sekcja „Ocena AI” pokazuje, że ocena dotyczy wersji sprzed edycji. Ponowna ocena po edycji to osobna zmiana pipeline'u.
 
+Publikacja i odrzucenie (`components/admin/ArticleDecision.tsx`, server actions `publishArticle` i `rejectArticle`, logika w `lib/admin/publish.ts`) są dostępne dla artykułów `review` i `approved`:
+
+- „Publikuj” jest zablokowany, gdy `publishBlockers` zwraca powody: brak oceny automatycznej, `unsupported_claims > 0`, brak leadu lub kategorii, treść pusta albo spoza schematu, pola SEO poza limitami `seoOutputSchema`. Gdy ocena automatyczna jest sprzed edycji redaktora, publikacja wymaga zaznaczenia potwierdzenia (sprawdza je też baza). Server action liczy blokady ponownie przed wywołaniem RPC `publish_article`,
+- „Odrzuć” przyjmuje opcjonalny powód (do 500 znaków), który trafia do `audit_log`,
+- po decyzji `revalidatePath` odświeża dashboard i widok artykułu; cache publiczny unieważnia webhook publikacji (sekcja 7).
+
 Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika w `lib/admin/ops.ts`) jest tylko dla admina, zgodnie z polityką `jobs_admin_select`:
 
 - lista jobów `dead` i `failed` (martwe pierwsze, limit 100) z typem, liczbą prób, początkiem błędu i linkiem do artykułu albo listy historii. `jobs` nie ma `updated_at`, więc martwy job pokazuje `processed_at` ustawiane przez `fail_job`, a `failed` termin kolejnej próby (`next_run_at`),
@@ -187,6 +193,7 @@ Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS 
 - Artykuł ma adres `/<slug kategorii>/<slug>` (jedna trasa `app/(site)/[category]/[slug]`); artykuł bez kategorii trafia pod `pilka-nozna`, a zła kategoria w adresie daje 308 na adres kanoniczny.
 - Dane publiczne czyta `lib/public/queries.ts` klientem anon bez ciasteczek (sesja redaktora nie wpuści szkicu do cache), z filtrem `status = 'published'` ponad RLS. Zapytania idą do Data Cache Next.js z tagami z `lib/public/cache-tags.ts` i `revalidate = 60` jako siatką bezpieczeństwa do czasu webhooka publikacji. `cacheComponents` jest wyłączone: włączenie dotyczy całej aplikacji, łącznie z panelem.
 - Aktualizacje (`article_updates`) bez `approved_by` nie trafiają na stronę.
+- Strona główna i strony kategorii (`app/(site)/page.tsx`, `app/(site)/[category]/page.tsx`) czytają listy z `lib/public/listings.ts` tym samym klientem, z tagiem `articles` (kategoria dodatkowo `category:<slug>`). Nagłówek i stopka z nawigacją po kategoriach (`components/public/SiteShell.tsx`) są w layoutach grup `(site)` i `(home)`, więc panel ich nie dostaje. Lista kategorii domyślnej obejmuje też artykuły bez kategorii. Build nie ma bazy i nie może jej odpytywać: strona główna ma własną grupę `(home)`, której layout woła `await connection()` przed zapytaniem o nawigację, a strona kategorii woła `connection()` sama; obie renderują się dopiero przy pierwszym żądaniu. Strony stałe (`/o-nas`, `/o-nas/zasady-redakcyjne`) leżą w grupie `(home)` z tego samego powodu. Profile zawodników, klubów i autorów (`lib/public/profiles.ts`) powstają przy pierwszej wizycie (`generateStaticParams` zwraca pustą listę) z `revalidate = 3600` na stronie i w cache danych; profil bez opublikowanych artykułów ma `noindex`. Layout `(site)` niczego nie wymusza, więc artykuł zostaje ISR (żadna trasa tej grupy nie jest prerenderowana w buildzie). Cache danych: zapytania idą przez `lib/public/client.ts` z tagami i `revalidate = 60`, odświeżane webhookiem publikacji. Nawigacja w layoutach ma `revalidate = 3600`, bo Next.js bierze najniższą wartość na stronie i z 60 s ściągałaby profile do odświeżania co minutę. Błędy zapytań są rzucane. Kategoria nie może mieć sluga ze statycznego segmentu pierwszego poziomu (`RESERVED_PATH_SEGMENTS` w `lib/public/paths.ts`); każdy nowy taki segment w `app/` trzeba tam dopisać.
 
 ### 3.9 Platform
 
@@ -228,10 +235,10 @@ Jedno repozytorium, jedna aplikacja Next.js w katalogu głównym, cały backend 
 │  │  ├─ artykuly/[id]/page.tsx    # widok review
 │  │  └─ zrodla/page.tsx           # zarządzanie źródłami
 │  ├─ api/
-│  │  ├─ revalidate/route.ts       # webhook z Supabase po publikacji
-│  │  └─ feed/route.ts             # RSS portalu
-│  ├─ sitemap.ts
-│  ├─ sitemap-news/route.ts
+│  │  └─ revalidate/route.ts       # webhook z Supabase po publikacji
+│  ├─ feed.xml/route.ts            # RSS portalu (poza /api, bo robots.txt blokuje /api)
+│  ├─ sitemap.xml/route.ts         # sitemapa całości
+│  ├─ sitemap-news.xml/route.ts    # Google News, ostatnie 48 h
 │  └─ robots.ts
 ├─ components/
 │  ├─ ui/                          # shadcn/ui
@@ -335,21 +342,21 @@ Skalowanie: zwiększenie przepustowości polega na wywołaniu `process-jobs` cz�
 
 1. Redaktor akceptuje artykuł w `/admin`. Server action ustawia `status = 'published'`, `published_at`, `approved_by`.
 2. Trigger w bazie blokuje publikację bez `approved_by` i wpisuje zdarzenie do `audit_log`.
-3. Database Webhook Supabase wysyła zdarzenie na `POST /api/revalidate` z nagłówkiem `x-webhook-secret`.
-4. Route handler weryfikuje sekret i woła `revalidateTag` dla `articles`, `article:<slug>`, `category:<slug>` oraz `sitemap`.
+3. Trigger na `articles` (migracja 0022) wysyła przez `pg_net` zdarzenie na `POST /api/revalidate` z nagłówkiem `x-webhook-secret`. To własny trigger zamiast Database Webhooka z dashboardu, bo URL i sekret czyta z Supabase Vault (`revalidate_webhook_url`, `revalidate_webhook_secret`), a nie z definicji triggera w migracji. Żądanie wychodzi dopiero po commicie; brak konfiguracji albo błąd `pg_net` nie wycofuje publikacji.
+4. Route handler weryfikuje sekret (porównanie w stałym czasie), waliduje payload zodem i woła `revalidateTag(tag, { expire: 0 })` dla `articles`, `article:<slug>`, `category:<slug>` oraz `sitemap` - przy zmianie sluga lub kategorii także dla poprzednich wartości. Odpowiada `401`, `400` albo `200` bez szczegółów błędu.
 5. Strona artykułu renderuje się statycznie (ISR) i jest serwowana z CDN.
 
 Aktualizacja istniejącej historii nie tworzy nowego artykułu. Dopisuje wpis do `article_updates`, podnosi `updated_at`, unieważnia te same tagi. Na stronie pojawia się blok "Aktualizacja" z godziną - to jest realna dodatkowa wartość dla użytkownika i jednocześnie sygnał świeżości dla Discover.
 
 Strategia renderowania:
 
-| Trasa                                | Strategia                                      |
-| ------------------------------------ | ---------------------------------------------- |
-| `/` i strony kategorii               | ISR, `revalidate = 60` plus tagi               |
-| `/transfery/[slug]`                  | ISR generowane na żądanie, unieważniane tagiem |
-| `/zawodnicy/[slug]`, `/kluby/[slug]` | ISR, `revalidate = 3600`                       |
-| `/admin/**`                          | Dynamiczne, `no-store`, wymuszony login        |
-| `sitemap.ts`, `feed`                 | ISR, unieważniane tagiem `sitemap`             |
+| Trasa                                | Strategia                                                            |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| `/` i strony kategorii               | Render przy żądaniu (nie w buildzie), tagi+60 s                      |
+| `/transfery/[slug]`                  | ISR generowane na żądanie, unieważniane tagiem                       |
+| `/zawodnicy/[slug]`, `/kluby/[slug]` | ISR, `revalidate = 3600`                                             |
+| `/admin/**`                          | Dynamiczne, `no-store`, wymuszony login                              |
+| `/sitemap*.xml`, `/feed.xml`         | Render przy żądaniu, cache danych tagami `sitemap`/`articles` + 60 s |
 
 ---
 
@@ -368,11 +375,13 @@ Strategia renderowania:
 ### 8.2 Na poziomie serwisu
 
 - `sitemap.xml` dla całości plus osobny `sitemap-news.xml` ograniczony do artykułów z ostatnich 48 godzin.
-- `robots.txt` z blokadą `/admin` i `/api`.
-- Feed RSS portalu.
+- `robots.txt` z blokadą `/admin`, `/login`, `/brak-dostepu` i `/api` oraz adresami obu sitemap.
+- Feed RSS portalu pod `/feed.xml`, wskazany w `<head>` stron publicznych (`<link rel="alternate">`).
 - Strony autorów, strona zasad redakcyjnych, strona kontaktowa i informacja o wydawcy.
 - Linkowanie wewnętrzne budowane automatycznie z `article_entities` - artykuł linkuje do profili zawodnika, klubu i ligi, a profile linkują do najnowszych artykułów.
 - Budżety wydajności: LCP poniżej 2,0 s na mobile, CLS poniżej 0,1, brak obrazów bez wymiarów, fonty lokalne.
+
+Sitemapy i feed to route handlery z buildera `lib/public/xml-feeds.ts` (escape XML, namespace `news:` i `atom:`), a nie `sitemap.ts`: metadata route nie obsługuje Google News i nie escapuje adresów. Każdy woła `connection()`, więc nie powstaje w buildzie; zapytania (`lib/public/sitemap-data.ts`, `lib/public/profiles.ts`) idą przez `lib/public/client.ts` z tagami `articles` i `sitemap`. `sitemap.xml` zawiera stronę główną, strony stałe, kategorie, artykuły z `lastmod` (późniejsza z dat publikacji i zmiany) oraz profile i autorów z co najmniej jednym opublikowanym artykułem; limit 50 000 adresów (nadmiar odpada od profili), zapytania stronicowane po 1000 wierszy (`max_rows`). `sitemap-news.xml` ma najwyżej 1000 adresów; zapytanie sięga od pełnej godziny, żeby klucz cache zmieniał się raz na godzinę, a dokładne okno 48 h liczy kod.
 
 ### 8.3 Granica, której nie przekraczamy
 
