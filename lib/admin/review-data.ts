@@ -43,6 +43,8 @@ export interface ArticleForReview {
   promptVersion: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Ostatnia edycja redaktora; rewizje modelu (edited_by null) sie nie licza. */
+  lastEditedAt: string | null;
   story: {
     id: string;
     title: string;
@@ -83,7 +85,7 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
   }
 
   const story = article.stories;
-  const [facts, sources] = await Promise.all([
+  const [facts, sources, lastEdit] = await Promise.all([
     supabase
       .from("facts")
       .select("id, subject, predicate, object, statement_pl, confidence, source_id")
@@ -95,6 +97,14 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
         "created_at, source_items(id, source_id, url, title, published_at, sources(name, type, trust_score, language))",
       )
       .eq("story_id", story.id),
+    supabase
+      .from("article_revisions")
+      .select("created_at")
+      .eq("article_id", article.id)
+      .not("edited_by", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (facts.error) {
@@ -102,6 +112,9 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
   }
   if (sources.error) {
     throw readFailed("zrodel historii", sources.error.message);
+  }
+  if (lastEdit.error) {
+    throw readFailed("rewizji artykulu", lastEdit.error.message);
   }
 
   const scores = article.article_scores;
@@ -120,6 +133,7 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
     promptVersion: article.prompt_version,
     createdAt: article.created_at,
     updatedAt: article.updated_at,
+    lastEditedAt: lastEdit.data?.created_at ?? null,
     story: {
       id: story.id,
       title: story.title,

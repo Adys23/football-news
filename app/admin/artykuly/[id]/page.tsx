@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArticleMetaForm } from "@/components/admin/ArticleMetaForm";
 import { BlockRenderer } from "@/components/article/BlockRenderer";
 import { FactTable } from "@/components/admin/FactTable";
 import { ScoreBadge } from "@/components/admin/ScoreBadge";
@@ -13,6 +14,7 @@ import {
   formatNewsroomTime,
   formatScore,
 } from "@/lib/admin/labels";
+import { scoresAreStale } from "@/lib/admin/article-edit";
 import {
   assessmentIsStale,
   checkSeoField,
@@ -97,6 +99,7 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
   const conflicts = parseConflicts(assessment?.conflicts);
   const stale = assessment ? assessmentIsStale(assessment.updatedAt, sources) : false;
   const sourceNumbers = assessmentSourceNumbers(sources);
+  const scoresStale = scores ? scoresAreStale(scores.checkedAt, article.lastEditedAt) : false;
   const sourceLabel = (index: number) => (!stale && sourceNumbers.get(index)) || `źródło ${index}`;
 
   return (
@@ -145,10 +148,29 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
         </div>
       </article>
 
+      {article.status === "review" ? (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold">Edycja</h2>
+          <ArticleMetaForm
+            articleId={article.id}
+            updatedAt={article.updatedAt}
+            title={article.title}
+            lead={article.lead ?? ""}
+          />
+        </section>
+      ) : null}
+
       <section className="mt-12">
         <h2 className="text-lg font-semibold">Ocena AI</h2>
         {scores ? (
           <>
+            {scoresStale && article.lastEditedAt ? (
+              <p className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+                Ocena dotyczy wersji sprzed edycji redaktora z{" "}
+                {formatNewsroomTime(article.lastEditedAt)}. Poprawiony tekst przeszedł tylko
+                kontrolę deterministyczną, model go nie oceniał.
+              </p>
+            ) : null}
             <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
               <ScoreBadge label="Jakość" value={scores.quality} />
               <ScoreBadge label="Zgodność z faktami" value={scores.factualAccuracy} />
