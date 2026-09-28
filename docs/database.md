@@ -361,6 +361,8 @@ Wpisy dodaje trigger `articles_record_slug_redirect` (0023) przy każdej zmianie
 
 `categories`: `id`, `name`, `slug` (`transfery`, `pilka-nozna`, `ekstraklasa`), `description`, `seo_title`, `seo_description`, `parent_id`.
 
+Kategoria ma adres `/<slug>`, więc jej slug nie może być statycznym segmentem pierwszego poziomu z `app/` - constraint `categories_slug_not_reserved` (0024) odrzuca wstawienie i zmianę na taki slug. Lista w migracji musi być zgodna z `RESERVED_PATH_SEGMENTS` w `lib/public/paths.ts` - pilnuje tego test `tests/lib/reserved-paths.test.ts`; nowy segment to wpis tam i nowa migracja, która usuwa i ponownie dodaje constraint. Slugi klubów, zawodników i autorów żyją pod własnymi prefiksami i tej blokady nie potrzebują.
+
 ---
 
 ## 6. Encje sportowe
@@ -518,31 +520,32 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 
 ## 10. Kolejność migracji
 
-| Plik                              | Zawartość                                                                                                                         |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_extensions.sql`             | `pg_trgm`, `unaccent`, `vector`, warunkowo `pg_cron` (`pgcrypto` i `pg_net` instaluje sam Supabase)                               |
-| `0002_enums.sql`                  | wszystkie typy wyliczeniowe                                                                                                       |
-| `0003_profiles_helpers.sql`       | `profiles`, funkcje `is_editor()`, `is_admin()`, `normalize_title()`, trigger `set_updated_at`                                    |
-| `0004_sources.sql`                | `sources` z ograniczeniem zaufania                                                                                                |
-| `0005_source_items.sql`           | `source_items`, indeksy trigram                                                                                                   |
-| `0006_taxonomy.sql`               | `authors`, `categories`                                                                                                           |
-| `0007_stories.sql`                | `stories`, `story_sources`                                                                                                        |
-| `0008_facts.sql`                  | `facts`, `story_assessments`                                                                                                      |
-| `0009_media.sql`                  | `image_assets`, bucket w Storage                                                                                                  |
-| `0010_entities.sql`               | `leagues`, `clubs`, `players`, `transfers`                                                                                        |
-| `0011_articles.sql`               | `articles`, `article_updates`, `article_scores`, `article_revisions`, `article_entities`, `article_redirects`, trigger publikacji |
-| `0012_jobs.sql`                   | `jobs`, funkcje kolejki, `llm_calls`                                                                                              |
-| `0013_settings_audit.sql`         | `settings` z wartościami domyślnymi, `audit_log`, trigger śladu zmian statusu artykułu                                            |
-| `0014_rls_policies.sql`           | polityki dla wszystkich tabel oraz bucketu Storage                                                                                |
-| `0015_cron.sql`                   | harmonogramy `pg_cron` wywołujące Edge Functions przez `pg_net`                                                                   |
-| `0016_ingestion_helpers.sql`      | `list_due_sources()`, `find_similar_stories()`                                                                                    |
-| `0017_link_source_item.sql`       | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                          |
-| `0018_pipeline_hardening.sql`     | `defer_job()`, unikalność `facts` po `source_item_id`, pełny indeks `jobs.dedupe_key`, progi oceny w `settings`                   |
-| `0019_editor_audit.sql`           | audyt z sesji redaktora (`security definer`), triggery `edit` i `source_change`, `requeue_dead_job()` dla admina                  |
-| `0020_save_article_edit.sql`      | `save_article_edit()`: snapshot w `article_revisions` i edycja artykułu `review` w jednej transakcji                              |
-| `0021_publish_reject_article.sql` | `publish_article()`, `reject_article()` z powodem w audycie, `search_path` w `enforce_publish_guard`                              |
-| `0022_revalidate_webhook.sql`     | warunkowo `pg_net`, `send_revalidate_webhook()` (sekrety z Vault), triggery webhooka na `articles` i `article_updates`            |
-| `0023_article_slug_redirects.sql` | trigger `articles_record_slug_redirect`: zmiana sluga opublikowanego artykułu zapisuje stary slug w `article_redirects`           |
+| Plik                               | Zawartość                                                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_extensions.sql`              | `pg_trgm`, `unaccent`, `vector`, warunkowo `pg_cron` (`pgcrypto` i `pg_net` instaluje sam Supabase)                               |
+| `0002_enums.sql`                   | wszystkie typy wyliczeniowe                                                                                                       |
+| `0003_profiles_helpers.sql`        | `profiles`, funkcje `is_editor()`, `is_admin()`, `normalize_title()`, trigger `set_updated_at`                                    |
+| `0004_sources.sql`                 | `sources` z ograniczeniem zaufania                                                                                                |
+| `0005_source_items.sql`            | `source_items`, indeksy trigram                                                                                                   |
+| `0006_taxonomy.sql`                | `authors`, `categories`                                                                                                           |
+| `0007_stories.sql`                 | `stories`, `story_sources`                                                                                                        |
+| `0008_facts.sql`                   | `facts`, `story_assessments`                                                                                                      |
+| `0009_media.sql`                   | `image_assets`, bucket w Storage                                                                                                  |
+| `0010_entities.sql`                | `leagues`, `clubs`, `players`, `transfers`                                                                                        |
+| `0011_articles.sql`                | `articles`, `article_updates`, `article_scores`, `article_revisions`, `article_entities`, `article_redirects`, trigger publikacji |
+| `0012_jobs.sql`                    | `jobs`, funkcje kolejki, `llm_calls`                                                                                              |
+| `0013_settings_audit.sql`          | `settings` z wartościami domyślnymi, `audit_log`, trigger śladu zmian statusu artykułu                                            |
+| `0014_rls_policies.sql`            | polityki dla wszystkich tabel oraz bucketu Storage                                                                                |
+| `0015_cron.sql`                    | harmonogramy `pg_cron` wywołujące Edge Functions przez `pg_net`                                                                   |
+| `0016_ingestion_helpers.sql`       | `list_due_sources()`, `find_similar_stories()`                                                                                    |
+| `0017_link_source_item.sql`        | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                          |
+| `0018_pipeline_hardening.sql`      | `defer_job()`, unikalność `facts` po `source_item_id`, pełny indeks `jobs.dedupe_key`, progi oceny w `settings`                   |
+| `0019_editor_audit.sql`            | audyt z sesji redaktora (`security definer`), triggery `edit` i `source_change`, `requeue_dead_job()` dla admina                  |
+| `0020_save_article_edit.sql`       | `save_article_edit()`: snapshot w `article_revisions` i edycja artykułu `review` w jednej transakcji                              |
+| `0021_publish_reject_article.sql`  | `publish_article()`, `reject_article()` z powodem w audycie, `search_path` w `enforce_publish_guard`                              |
+| `0022_revalidate_webhook.sql`      | warunkowo `pg_net`, `send_revalidate_webhook()` (sekrety z Vault), triggery webhooka na `articles` i `article_updates`            |
+| `0023_article_slug_redirects.sql`  | trigger `articles_record_slug_redirect`: zmiana sluga opublikowanego artykułu zapisuje stary slug w `article_redirects`           |
+| `0024_reserved_category_slugs.sql` | constraint `categories_slug_not_reserved`: slug kategorii spoza zarezerwowanych segmentów pierwszego poziomu                      |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
