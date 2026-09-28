@@ -15,6 +15,7 @@ export interface ArticleCardRow {
 /** Artykul w postaci potrzebnej karcie na liscie. */
 export interface ArticleCard {
   id: string;
+  slug: string;
   title: string;
   lead: string | null;
   publishedAt: string;
@@ -31,6 +32,7 @@ export function toArticleCard(row: ArticleCardRow): ArticleCard {
 
   return {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     lead: row.lead,
     publishedAt: row.published_at,

@@ -23,6 +23,7 @@ describe("toArticleCard", () => {
   it("maps the row and builds the canonical link", () => {
     expect(toArticleCard(cardRow())).toEqual({
       id: "article-1",
+      slug: "bruno-fernandes-przedluza-kontrakt",
       title: "Bruno Fernandes przedłuża kontrakt z Manchesterem United",
       lead: "Klub potwierdził nową umowę.",
       publishedAt: "2026-09-28T10:00:00Z",

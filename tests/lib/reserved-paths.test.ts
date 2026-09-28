@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { RESERVED_PATH_SEGMENTS, isReservedPathSegment, isValidSlug } from "@/lib/public/paths";
+import {
+  RESERVED_PATH_SEGMENTS,
+  isReachableArticle,
+  isReservedPathSegment,
+  isValidSlug,
+} from "@/lib/public/paths";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 
@@ -63,5 +68,20 @@ describe("RESERVED_PATH_SEGMENTS", () => {
   it("recognises reserved segments", () => {
     expect(isReservedPathSegment("admin")).toBe(true);
     expect(isReservedPathSegment("transfery")).toBe(false);
+  });
+});
+
+describe("isReachableArticle", () => {
+  it("accepts an article with or without a category", () => {
+    expect(isReachableArticle({ slug: "nowy-kontrakt", categorySlug: "transfery" })).toBe(true);
+    expect(isReachableArticle({ slug: "nowy-kontrakt", categorySlug: null })).toBe(true);
+  });
+
+  it("rejects an invalid slug and a category that shadows a fixed route", () => {
+    expect(isReachableArticle({ slug: "Zly_Slug", categorySlug: "transfery" })).toBe(false);
+    expect(isReachableArticle({ slug: "nowy-kontrakt", categorySlug: "o-nas" })).toBe(false);
+    expect(isReachableArticle({ slug: "nowy-kontrakt", categorySlug: "Zla_Kategoria" })).toBe(
+      false,
+    );
   });
 });

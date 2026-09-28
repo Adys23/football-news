@@ -210,20 +210,32 @@ export async function listPublishedEntities(
 
 /** Aktywni autorzy z co najmniej jednym opublikowanym artykulem. */
 export async function listPublishedAuthors(): Promise<ProfileListing[]> {
-  const { data, error } = await profileClient([...TAGS, CACHE_TAGS.sitemap])
-    .from("authors")
-    .select("slug, articles!inner(published_at)")
-    .eq("articles.status", "published")
-    .order("published_at", { referencedTable: "articles", ascending: false })
-    .limit(1, { referencedTable: "articles" })
-    .order("slug", { ascending: true });
+  const supabase = profileClient([...TAGS, CACHE_TAGS.sitemap]);
+  const result: ProfileListing[] = [];
 
-  if (error) {
-    throw readError("autorzy", error);
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("authors")
+      .select("slug, articles!inner(published_at)")
+      .eq("articles.status", "published")
+      .order("published_at", { referencedTable: "articles", ascending: false })
+      .limit(1, { referencedTable: "articles" })
+      .order("slug", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      throw readError("autorzy", error);
+    }
+    for (const row of data) {
+      const lastModified = row.articles[0]?.published_at;
+      if (lastModified) {
+        result.push({ slug: row.slug, lastModified });
+      }
+    }
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
   }
 
-  return data.flatMap((row) => {
-    const lastModified = row.articles[0]?.published_at;
-    return lastModified ? [{ slug: row.slug, lastModified }] : [];
-  });
+  return result;
 }

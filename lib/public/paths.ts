@@ -45,6 +45,20 @@ export function isReservedPathSegment(slug: string): boolean {
   return RESERVED_PATH_SEGMENTS.includes(slug);
 }
 
+/** Adres artykulu prowadzi do strony artykulu, a nie do 404 ani innej trasy. */
+export function isReachableArticle(article: {
+  slug: string;
+  categorySlug: string | null;
+}): boolean {
+  const { slug, categorySlug } = article;
+  if (!isValidSlug(slug)) {
+    return false;
+  }
+  return (
+    categorySlug === null || (isValidSlug(categorySlug) && !isReservedPathSegment(categorySlug))
+  );
+}
+
 /** Profil zawodnika: /zawodnicy/<slug> (docs/architecture.md §4). */
 export function playerPath(playerSlug: string): string {
   return `/zawodnicy/${playerSlug}`;
@@ -73,3 +87,12 @@ export const ABOUT_PATH = "/o-nas";
 
 /** Zasady redakcyjne (docs/architecture.md §4). */
 export const EDITORIAL_POLICY_PATH = "/o-nas/zasady-redakcyjne";
+
+/** Sitemapa calego serwisu. */
+export const SITEMAP_PATH = "/sitemap.xml";
+
+/** Sitemapa Google News: artykuly z ostatnich 48 godzin. */
+export const NEWS_SITEMAP_PATH = "/sitemap-news.xml";
+
+/** Feed RSS portalu. Poza /api, bo robots.txt blokuje /api. */
+export const FEED_PATH = "/feed.xml";
