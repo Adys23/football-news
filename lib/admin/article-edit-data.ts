@@ -8,6 +8,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface ArticleForEdit {
   storyId: string;
+  title: string;
+  lead: string | null;
   content: Json;
 }
 
@@ -15,14 +17,16 @@ export async function getArticleForEdit(id: string): Promise<ArticleForEdit | nu
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("articles")
-    .select("story_id, content")
+    .select("story_id, title, lead, content")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
     throw new Error(`Nie udalo sie odczytac artykulu do edycji: ${error.message}`);
   }
-  return data ? { storyId: data.story_id, content: data.content } : null;
+  return data
+    ? { storyId: data.story_id, title: data.title, lead: data.lead, content: data.content }
+    : null;
 }
 
 export type EditCheckResult = { ok: true; issues: string[] } | { ok: false; message: string };

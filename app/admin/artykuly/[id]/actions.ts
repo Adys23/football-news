@@ -1,9 +1,11 @@
 "use server";
 
 import { refresh } from "next/cache";
-import type { Json } from "@contracts/index.ts";
+import { articleContentSchema, type Json } from "@contracts/index.ts";
 import {
   ARTICLE_NOT_FOUND,
+  editRuleIssues,
+  parseArticleContentEdit,
   parseArticleMetaEdit,
   saveErrorMessage,
   type ArticleEditState,
@@ -34,6 +36,39 @@ export async function saveArticleMeta(
     title,
     lead,
     content: article.content,
+  });
+}
+
+export async function saveArticleContent(
+  _prev: ArticleEditState | undefined,
+  formData: FormData,
+): Promise<ArticleEditState> {
+  await requireRole("editor");
+
+  const parsed = parseArticleContentEdit(formData);
+  if (!parsed.ok) {
+    return parsed.state;
+  }
+  const { articleId, expectedUpdatedAt, content } = parsed.data;
+
+  const article = await getArticleForEdit(articleId);
+  if (!article) {
+    return { status: "error", message: ARTICLE_NOT_FOUND };
+  }
+  if (article.lead === null) {
+    return { status: "error", message: "Uzupełnij lead, zanim zapiszesz treść." };
+  }
+
+  const current = articleContentSchema.safeParse(article.content);
+  const ruleIssues = editRuleIssues(current.success ? current.data.blocks : [], content.blocks);
+  if (ruleIssues.length > 0) {
+    return { status: "error", message: "Zmiany łamią zasady edycji.", issues: ruleIssues };
+  }
+
+  return saveArticleEdit(articleId, expectedUpdatedAt, article.storyId, {
+    title: article.title,
+    lead: article.lead,
+    content,
   });
 }
 
