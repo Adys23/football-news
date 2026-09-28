@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { EDITORIAL_POLICY_PATH } from "@/lib/public/paths";
+
 /**
  * Informacja o roli AI i akceptacji redaktora (docs/architecture.md §8.1).
  * Kazdy opublikowany artykul ma approved_by - wymusza to trigger publikacji.
@@ -16,6 +19,11 @@ export function AiDisclosure({ aiGenerated }: { aiGenerated: boolean }) {
           ? "Tekst przygotowano z pomocą sztucznej inteligencji wyłącznie na podstawie faktów potwierdzonych w źródłach. "
           : "Tekst napisała redakcja. "}
         Przed publikacją sprawdził go i zatwierdził redaktor.
+      </p>
+      <p className="mt-2">
+        <Link href={EDITORIAL_POLICY_PATH} className="font-medium underline">
+          Zasady redakcyjne
+        </Link>
       </p>
     </aside>
   );
