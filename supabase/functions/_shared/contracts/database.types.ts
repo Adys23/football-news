@@ -1437,6 +1437,7 @@ export type Database = {
         };
         Returns: string;
       };
+      send_revalidate_webhook: { Args: { p_payload: Json }; Returns: undefined };
       title_contains_label: { Args: { p_label: string; p_title: string }; Returns: boolean };
     };
     Enums: {
