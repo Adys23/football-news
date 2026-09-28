@@ -5,6 +5,7 @@ import { StatCard } from "@/components/admin/StatCard";
 import { UrgentStories } from "@/components/admin/UrgentStories";
 import { URGENT_IMPORTANCE } from "@/lib/admin/dashboard";
 import { getDashboardCounts, getReviewQueue, getUrgentStories } from "@/lib/admin/dashboard-data";
+import { countDeadJobs } from "@/lib/admin/ops-data";
 import { requireRole } from "@/lib/auth/dal";
 
 export const dynamic = "force-dynamic";
@@ -15,18 +16,28 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  await requireRole("editor");
+  const profile = await requireRole("editor");
   const now = new Date();
 
-  const [counts, urgent, queue] = await Promise.all([
+  const [counts, urgent, queue, deadJobs] = await Promise.all([
     getDashboardCounts(now),
     getUrgentStories(now),
     getReviewQueue(),
+    profile.role === "admin" ? countDeadJobs() : 0,
   ]);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-16">
       <h1 className="text-2xl font-semibold tracking-tight">Panel redakcyjny</h1>
+
+      {deadJobs > 0 ? (
+        <p role="alert" className="mt-6 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
+          Martwe joby: {deadJobs}.{" "}
+          <Link href="/admin/joby" className="underline">
+            Przejrzyj i ponów
+          </Link>
+        </p>
+      ) : null}
 
       <dl className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Nowe historie (doba)" value={counts.newStories} />

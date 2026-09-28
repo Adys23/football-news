@@ -21,6 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </Link>
             <Link href="/admin/historie">Historie</Link>
             {profile.role === "admin" ? <Link href="/admin/joby">Joby</Link> : null}
+            <Link href="/admin/zrodla">Źródła</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-neutral-600">

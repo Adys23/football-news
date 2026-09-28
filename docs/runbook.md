@@ -143,3 +143,24 @@ Kiedy: pojedynczy martwy job po usunięciu przyczyny (sekcja 2), bez dostępu do
 3. „Ponów” woła `requeue_dead_job(id)`: status `queued`, `attempts = 0`, `error = null`. Funkcja sama sprawdza `is_admin()`, więc ręcznie wysłane żądanie editora też zostanie odrzucone.
 4. Po kliknięciu lista się odświeża i ponowiony job z niej znika. Jeśli ktoś ponowił go wcześniej, efekt jest ten sam - funkcja nic nie zmienia. Komunikat pojawia się tylko przy błędzie.
 5. Wielu martwych jobów tego samego typu nie ponawiaj po jednym z panelu. Najpierw diagnoza z sekcji 2, potem `requeue_dead_jobs()` z filtrem po typie.
+
+---
+
+## 13. Zdrowie źródeł w panelu i ponowne włączenie źródła
+
+Kiedy: źródło wyłączyło się po błędach (sekcja 3) albo trzeba je wyłączyć ręcznie.
+
+1. `/admin/zrodla` widzi każdy redaktor: stan, `trust_score`, błędy z rzędu, ostatnie sprawdzenie i ostatni sukces. Źródła z problemami są na górze. „Wyłączone przez circuit breaker” to `active = false` przy liczniku co najmniej 10, „Wyłączone ręcznie” to `active = false` przy niższym liczniku.
+2. Ostatni błąd pobierania (z jobów `FETCH_SOURCE`) i przycisk „Włącz” / „Wyłącz” widzi tylko admin, bo `jobs` i zapis do `sources` są w RLS tylko dla admina.
+3. Włączenie źródła w tym samym zapisie zeruje `consecutive_failures`. Bez tego pierwszy błąd po włączeniu od razu wyłączyłby źródło ponownie. Włącz dopiero po usunięciu przyczyny (sekcja 3, kroki 1-4).
+4. Każda zmiana `active` trafia do `audit_log` jako `source_change` z `actor_id` admina (trigger z migracji 0019). Zerowanie licznika nie ma osobnego wpisu - jest częścią tej samej zmiany.
+5. Nieaktualny formularz (źródło zmienił wcześniej ktoś inny albo pipeline) niczego nie zapisuje, tylko odświeża listę.
+6. Znane ograniczenie: `fetch-source` zapisuje `active` i licznik bez sprawdzenia, czy zmieniły się w trakcie pobierania. Kliknięcie w trakcie trwającego `FETCH_SOURCE` może zostać nadpisane (wpis w audycie z pustym `actor_id`). Po przełączeniu źródła odśwież stronę po minucie i w razie potrzeby powtórz.
+
+---
+
+## 14. Nowe konto redaktora
+
+1. Supabase Studio (`npm run db:studio` lokalnie) → Authentication → Add user, z potwierdzonym e-mailem.
+2. W SQL editorze dopisz profil: `insert into profiles (id, email, display_name, role) values ('<id z auth.users>', '<e-mail>', '<imię>', 'editor');`. Rola `admin` tylko dla osób, które mają ponawiać joby i przełączać źródła.
+3. Bez wiersza w `profiles` konto nie wejdzie do panelu. Konto odbiera się przez `profiles.active = false`, nie przez usunięcie użytkownika, żeby wpisy w `audit_log` zachowały autora.

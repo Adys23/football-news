@@ -169,6 +169,14 @@ Widok jobów (`app/admin/joby/page.tsx`, dane w `lib/admin/ops-data.ts`, logika 
 - lista jobów `dead` i `failed` (martwe pierwsze, limit 100) z typem, liczbą prób, początkiem błędu i linkiem do artykułu albo listy historii. `jobs` nie ma `updated_at`, więc martwy job pokazuje `processed_at` ustawiane przez `fail_job`, a `failed` termin kolejnej próby (`next_run_at`),
 - „Ponów” to server action: `requireRole('admin')`, walidacja id zodem, RPC `requeue_dead_job` na sesji admina (bez `service_role`), potem `revalidatePath('/admin/joby')`. Rolę sprawdza też sama funkcja w bazie.
 
+Dashboard pokazuje adminowi alert z liczbą martwych jobów i linkiem do `/admin/joby`.
+
+Widok zdrowia źródeł (`app/admin/zrodla/page.tsx`, te same pliki `lib/admin/ops*`) czyta każdy redaktor (`sources_editor_select`):
+
+- stan wyliczany z `active` i `consecutive_failures` wobec `SOURCE_FAILURE_LIMIT` z `_shared/lib/circuit-breaker.ts` (ten sam próg co w `fetch-source`); źródła z problemami na górze,
+- ostatni błąd pobierania (najnowszy `jobs.error` dla `FETCH_SOURCE` danego źródła) tylko dla admina, bo `jobs` jest w RLS tylko dla admina,
+- przełącznik `active` tylko dla admina: server action z `requireRole('admin')` i zodem, `update sources` na sesji (`sources_admin_write`) z warunkiem na poprzedni stan, więc nieaktualny formularz nic nie zmienia. Włączenie zeruje w tym samym zapisie `consecutive_failures`, a trigger `sources_audit_change` zapisuje jedną zmianę `source_change`.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
