@@ -1450,6 +1450,41 @@ export type Database = {
         };
         Returns: string;
       };
+      quality_report_articles: {
+        Args: { p_since: string };
+        Returns: {
+          article_id: string;
+          category_id: string;
+          checked_at: string;
+          clickbait: number;
+          content_edited: boolean;
+          editor_revisions: number;
+          factual_accuracy: number;
+          lead_edited: boolean;
+          originality: number;
+          published_at: string;
+          quality: number;
+          reject_reason: string;
+          rejected_at: string;
+          seo: number;
+          status: Database["public"]["Enums"]["article_status"];
+          title: string;
+          title_edited: boolean;
+          unsupported_claims: number;
+        }[];
+      };
+      quality_report_category_totals: {
+        Args: { p_since: string };
+        Returns: {
+          category_id: string;
+          first_published_at: string;
+          llm_calls: number;
+          llm_cost_usd: number;
+          llm_escalated_calls: number;
+          llm_failed_calls: number;
+          llm_unpriced_calls: number;
+        }[];
+      };
       reject_article: {
         Args: { p_article_id: string; p_expected_updated_at: string; p_reason?: string };
         Returns: undefined;

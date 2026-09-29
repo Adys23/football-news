@@ -529,6 +529,13 @@ Strona publiczna potrzebuje listy źródeł i treści faktów z bloków `fact_bo
 - `public_article_sources(p_article_id)` -> `source_name`, `source_type`, `title`, `url`, `published_at` materiałów historii artykułu dopiętych nie później niż publikacja lub ostatnia zaakceptowana aktualizacja z `published_at` w przeszłości (zaplanowana aktualizacja nie poszerza okna); tylko adresy `http(s)`, bez `trust_score`, `content`, `raw_data` i pól technicznych źródła. `published_at` może być `null`, choć wygenerowany typ tego nie pokazuje.
 - `public_article_facts(p_article_id)` -> `id`, `statement_pl` faktów tej historii wskazanych w blokach `fact_box` opublikowanej treści. Kryterium jest treść zaakceptowana przez redaktora, nie `story_assessments`: nowa ocena po publikacji nie odsłania nowych faktów, a fakt zastąpiony późniejszą ekstrakcją zostaje, bo redaktor go zatwierdził.
 
+Raport jakości w panelu (`/admin/jakosc`) potrzebuje powodów odrzuceń z `audit_log` i kosztu z `llm_calls`, a obie tabele są tylko dla admina. Dwie funkcje z `0028` (`security definer`, `search_path = ''`, `execute` tylko dla `authenticated`, na starcie `is_editor()` albo `42501`, `p_since = null` to `22023`) zwracają redaktorowi wyłącznie pola i agregaty potrzebne raportowi. `audit_log`, `llm_calls` i `settings` zostają wprost niewidoczne:
+
+- `quality_report_articles(p_since)` -> jeden wiersz na artykuł czekający na decyzję (`review` lub `approved`, bez okna) oraz opublikowany (`published_at`), odrzucony (ostatni wpis `reject` w `audit_log`) albo oceniony (`article_scores.checked_at`) od `p_since`: `article_id`, `title`, `category_id`, `status`, `published_at`, `rejected_at`, `reject_reason` (z `audit_log.diff.reason`, bez `actor_id`), `editor_revisions` oraz `title_edited`, `lead_edited`, `content_edited` i oceny z `article_scores`. Edycje liczone są tylko z rewizji redaktora (`edited_by is not null`): rewizja to stan sprzed zmiany, więc porównanie idzie z następną rewizją redaktora albo, dla ostatniej, z bieżącym wierszem `articles` (`is distinct from`). Rewizje modelu są pomijane (mają tytuł historii, nie tytuł z `GENERATE_TITLE`). Rewizja redaktora, którego profil usunięto (`edited_by` -> `null`), wygląda jak rewizja modelu i nie jest liczona.
+- `quality_report_category_totals(p_since)` -> na kategorię: `first_published_at` (od początku, nie od `p_since`) oraz od `p_since` `llm_calls`, `llm_cost_usd` (`null` bez żadnej ceny), `llm_unpriced_calls` (`cost_usd is null`), `llm_failed_calls` (`not ok`), `llm_escalated_calls`. Kategoria wywołania to `stories.category_id` jego historii; `category_id = null` to historia bez kategorii albo wywołanie bez historii. `llm_calls` nie ma flagi eskalacji, więc eskalacja to wywołanie modelu z bieżącego `settings.model_escalation`; zmiana tego ustawienia przekłamuje historię.
+
+Pola, które mogą być `null` (`category_id`, `published_at`, `rejected_at`, `reject_reason`, oceny, `checked_at`, `first_published_at`, `llm_cost_usd`), wygenerowany typ pokazuje jako niepuste; aplikacja waliduje wiersze schematem zod.
+
 Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel redaktora działa na sesji użytkownika i może zmienić tylko to, co jest mu potrzebne do recenzji.
 
 ---
@@ -564,6 +571,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0025_seo_refresh_after_edit.sql`  | `save_article_edit()` czyści SEO przy zmianie tytułu lub leadu, `enqueue_seo_refresh()` kolejkuje `GENERATE_SEO` (`definer`), `publish_article()` wymaga SEO |
 | `0026_public_provenance.sql`       | `public_article_sources()`, `public_article_facts()` dla strony publicznej; `article_updates` dla anona tylko z `approved_by`                                |
 | `0027_article_images_guard.sql`    | triggery `articles_enforce_images` i `image_assets_protect_used`, `article_revisions.hero_image_id`, `save_article_edit()` z `p_hero_image_id`               |
+| `0028_quality_report.sql`          | `quality_report_articles()`, `quality_report_category_totals()` (`definer`, tylko redakcja): dane raportu jakości bez dostępu do `audit_log` i `llm_calls`   |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
