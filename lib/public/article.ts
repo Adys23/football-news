@@ -93,7 +93,7 @@ export function toPublicArticle(row: PublishedArticleRow): PublicArticle {
     author: row.authors
       ? { name: row.authors.name, slug: row.authors.slug, roleTitle: row.authors.role_title }
       : null,
-    // RLS pokazuje aktualizacje kazdego opublikowanego artykulu, takze te bez akceptacji.
+    // RLS od 0026 ukrywa aktualizacje bez akceptacji; filtr zostaje jako druga warstwa.
     updates: row.article_updates
       .filter((update) => update.approved_by !== null)
       .map((update) => ({ id: update.id, body: update.body, publishedAt: update.published_at }))

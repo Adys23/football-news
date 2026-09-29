@@ -504,7 +504,7 @@ Polityki - zasada domyślna to "brak dostępu", uprawnienia dodawane wybiórczo:
 | Tabela                                                                 | anon                                                               | authenticated (editor / admin)            | service_role |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------- | ------------ |
 | `articles`                                                             | `select` gdy `status = 'published'`                                | pełny `select`, `update` treści i statusu | pełny        |
-| `article_updates`                                                      | `select` gdy artykuł opublikowany                                  | `select`, `insert`                        | pełny        |
+| `article_updates`                                                      | `select` gdy artykuł opublikowany i `approved_by is not null`      | `select`, `insert`                        | pełny        |
 | `authors`, `categories`, `players`, `clubs`, `leagues`, `image_assets` | `select`                                                           | `select`, `update` (admin)                | pełny        |
 | `article_entities`, `article_redirects`                                | `select` (potrzebne do linkowania wewnętrznego i przekierowań 301) | pełny                                     | pełny        |
 | `article_scores`, `article_revisions`                                  | brak                                                               | `select`                                  | pełny        |
@@ -513,6 +513,11 @@ Polityki - zasada domyślna to "brak dostępu", uprawnienia dodawane wybiórczo:
 | `jobs`, `llm_calls`, `settings`                                        | brak                                                               | `select` (admin)                          | pełny        |
 | `audit_log`                                                            | brak                                                               | `select` (admin), `insert` tylko triggery | pełny        |
 | `transfers`                                                            | `select` gdy `status = 'official'`                                 | `select`                                  | pełny        |
+
+Strona publiczna potrzebuje listy źródeł i treści faktów z bloków `fact_box`, ale `sources`, `source_items`, `story_sources` i `facts` zostają dla anona zamknięte. Dostęp dają dwie funkcje z `0026` (`security definer`, `search_path = ''`, `execute` dla `anon`), które zwracają wiersze tylko dla artykułu `published`:
+
+- `public_article_sources(p_article_id)` -> `source_name`, `source_type`, `title`, `url`, `published_at` materiałów historii artykułu dopiętych nie później niż publikacja lub ostatnia zaakceptowana aktualizacja z `published_at` w przeszłości (zaplanowana aktualizacja nie poszerza okna); tylko adresy `http(s)`, bez `trust_score`, `content`, `raw_data` i pól technicznych źródła. `published_at` może być `null`, choć wygenerowany typ tego nie pokazuje.
+- `public_article_facts(p_article_id)` -> `id`, `statement_pl` faktów tej historii wskazanych w blokach `fact_box` opublikowanej treści. Kryterium jest treść zaakceptowana przez redaktora, nie `story_assessments`: nowa ocena po publikacji nie odsłania nowych faktów, a fakt zastąpiony późniejszą ekstrakcją zostaje, bo redaktor go zatwierdził.
 
 Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel redaktora działa na sesji użytkownika i może zmienić tylko to, co jest mu potrzebne do recenzji.
 
@@ -547,6 +552,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0023_article_slug_redirects.sql`  | trigger `articles_record_slug_redirect`: zmiana sluga opublikowanego artykułu zapisuje stary slug w `article_redirects`                                      |
 | `0024_reserved_category_slugs.sql` | constraint `categories_slug_not_reserved`: slug kategorii spoza zarezerwowanych segmentów pierwszego poziomu                                                 |
 | `0025_seo_refresh_after_edit.sql`  | `save_article_edit()` czyści SEO przy zmianie tytułu lub leadu, `enqueue_seo_refresh()` kolejkuje `GENERATE_SEO` (`definer`), `publish_article()` wymaga SEO |
+| `0026_public_provenance.sql`       | `public_article_sources()`, `public_article_facts()` dla strony publicznej; `article_updates` dla anona tylko z `approved_by`                                |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
