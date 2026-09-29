@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { proxyRedirect, safeNextPath } from "@/lib/auth/redirects";
+import {
+  forbiddenPath,
+  parseRequiredRole,
+  proxyRedirect,
+  safeNextPath,
+} from "@/lib/auth/redirects";
 
 describe("safeNextPath", () => {
   it.each(["/admin", "/admin/historie", "/admin/artykuly/1?tab=fakty"])(
@@ -36,5 +41,35 @@ describe("proxyRedirect", () => {
   it("logowanie nigdy nie przekierowuje, niezaleznie od sesji", () => {
     expect(proxyRedirect("/login", true)).toBeNull();
     expect(proxyRedirect("/login", false)).toBeNull();
+  });
+});
+
+describe("forbiddenPath", () => {
+  it("dopisuje wymagana role do /brak-dostepu", () => {
+    expect(forbiddenPath("admin")).toBe("/brak-dostepu?rola=admin");
+    expect(forbiddenPath("editor")).toBe("/brak-dostepu?rola=editor");
+  });
+
+  it("proxy nie przekierowuje strony braku uprawnien", () => {
+    expect(proxyRedirect("/brak-dostepu", false)).toBeNull();
+  });
+});
+
+describe("parseRequiredRole", () => {
+  it.each(["editor", "admin"] as const)("przyjmuje %s", (role) => {
+    expect(parseRequiredRole(role)).toBe(role);
+  });
+
+  it.each([
+    ["inna rola", "viewer"],
+    ["wielkie litery", "ADMIN"],
+    ["spacje", " admin "],
+    ["html", "<script>alert(1)</script>"],
+    ["tablica", ["admin", "editor"]],
+    ["pusty", ""],
+    ["undefined", undefined],
+    ["null", null],
+  ])("odrzuca: %s", (_name, value) => {
+    expect(parseRequiredRole(value)).toBeNull();
   });
 });
