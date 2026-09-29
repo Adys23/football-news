@@ -447,4 +447,4 @@ Metryki, które prowadzą decyzje o automatyzacji: udział artykułów wymagają
   Na maszynie deweloperskiej działa równolegle lokalny stack innego projektu, zajmujący porty `54121` - `54127`. Dlatego `supabase/config.toml` ma jawnie przypisany `project_id = "football-news"` i własny blok portów, zamiast polegać na domyślnych: API `54321`, baza `54322`, Studio `54323`, Inbucket `54324`, Analytics `54327`. Bez tego `supabase start` albo wejdzie w konflikt portów, albo zatrzyma stack drugiego projektu.
 
 - **Staging**: osobny projekt Supabase, cron wyłączony domyślnie, ręczne uruchamianie jobów.
-- **Produkcja**: Supabase Cloud plus Vercel. Migracje wyłącznie przez `supabase db push` w CI, nigdy ręcznie w panelu.
+- **Produkcja**: Supabase Cloud (`eu-central-1`) plus Vercel (`fra1`, `vercel.json`). Migracje i Edge Functions wyłącznie przez `npm run deploy:supabase` (`supabase db push` i `functions deploy`), nigdy ręcznie w panelu. Deploy z CI nie jest skonfigurowany. Harmonogramy czytają adres funkcji i klucz z Vault (0029). Procedura: [deployment.md](deployment.md).
