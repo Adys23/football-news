@@ -36,6 +36,8 @@
     "ui:add": "shadcn add",
     "test:pipeline": "node scripts/test-pipeline.mjs",
     "perf:budget": "node scripts/perf-budget.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
+    "deploy:supabase": "node scripts/deploy-supabase.mjs",
     "deno:check": "cd supabase/functions && deno check --frozen fetch-sources/index.ts process-jobs/index.ts _shared/",
     "deno:lint": "cd supabase/functions && deno lint",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
