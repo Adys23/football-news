@@ -25,10 +25,10 @@ describe("validateProjectRef", () => {
 
 describe("parseEnvFile", () => {
   it("pomija komentarze i puste linie, zdejmuje cudzyslowy", () => {
-    const entries = parseEnvFile('# komentarz\n\nLLM_ENABLED=false\nOPENAI_API_KEY="sk-x"\n');
+    const entries = parseEnvFile("# komentarz\n\nLLM_ENABLED=\"false\"\nexport MODEL='luna'\n");
     expect([...entries]).toEqual([
       ["LLM_ENABLED", "false"],
-      ["OPENAI_API_KEY", "sk-x"],
+      ["MODEL", "luna"],
     ]);
   });
 

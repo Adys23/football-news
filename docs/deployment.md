@@ -57,10 +57,9 @@ Skrypt wdrożeniowy celowo nie ustawia Vault ani crona: to SQL z sekretami, któ
    ```bash
    export SUPABASE_ACCESS_TOKEN=... SUPABASE_DB_PASSWORD=...
    npm run deploy:supabase -- --project-ref=<ref>            # podgląd: lista migracji
-   printf 'LLM_ENABLED=false\nOPENAI_API_KEY=<klucz>\n' > supabase/.env.production
    npm run deploy:supabase -- --project-ref=<ref> --yes --secrets-file=supabase/.env.production
    ```
-   `db push` zapyta jeszcze o potwierdzenie listy migracji.
+   Przed drugą komendą utwórz `supabase/.env.production` z dwiema liniami w formacie `.env`: `LLM_ENABLED` z wartością `false` i `OPENAI_API_KEY` z kluczem API. Plik nie trafia do repozytorium. `db push` zapyta jeszcze o potwierdzenie listy migracji.
 3. **Dane startowe (SQL editor, rola `postgres`).** Seed nie idzie na produkcję, bo zawiera lokalne konta z hasłami. Wykonaj jego część od `-- === Kategorie ===` do końca: kategorie, ligi, kluby, zawodnicy i źródła. Wypisze ją `sed -n '/^-- === Kategorie ===/,$p' supabase/seed.sql`. Źródła z `active = false` włączaj dopiero po weryfikacji feedu (`npm run source:test -- <url>`). Uzupełnij cennik modeli:
    ```sql
    insert into settings (key, value, description)
