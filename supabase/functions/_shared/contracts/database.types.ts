@@ -1414,6 +1414,23 @@ export type Database = {
         Returns: string;
       };
       normalize_title: { Args: { p_title: string }; Returns: string };
+      public_article_facts: {
+        Args: { p_article_id: string };
+        Returns: {
+          id: string;
+          statement_pl: string;
+        }[];
+      };
+      public_article_sources: {
+        Args: { p_article_id: string };
+        Returns: {
+          published_at: string;
+          source_name: string;
+          source_type: Database["public"]["Enums"]["source_type"];
+          title: string;
+          url: string;
+        }[];
+      };
       publish_article: {
         Args: {
           p_article_id: string;
