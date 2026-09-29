@@ -35,6 +35,7 @@ export interface ArticleForReview {
   title: string;
   lead: string | null;
   content: Json;
+  heroImageId: string | null;
   slug: string;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -74,7 +75,7 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
   const { data: article, error } = await supabase
     .from("articles")
     .select(
-      "id, title, lead, content, slug, seo_title, seo_description, category_id, status, published_at, model_used, prompt_version, created_at, updated_at, article_scores(factual_accuracy, originality, seo, clickbait, quality, unsupported_claims, issues, model_used, prompt_version, checked_at), stories!inner(id, title, importance, event_type, status, story_assessments(publishability, confidence, conflicts, approved_fact_ids, reasoning, model_used, prompt_version, updated_at))",
+      "id, title, lead, content, hero_image_id, slug, seo_title, seo_description, category_id, status, published_at, model_used, prompt_version, created_at, updated_at, article_scores(factual_accuracy, originality, seo, clickbait, quality, unsupported_claims, issues, model_used, prompt_version, checked_at), stories!inner(id, title, importance, event_type, status, story_assessments(publishability, confidence, conflicts, approved_fact_ids, reasoning, model_used, prompt_version, updated_at))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -127,6 +128,7 @@ export async function getArticleForReview(id: string): Promise<ArticleForReview 
     title: article.title,
     lead: article.lead,
     content: article.content,
+    heroImageId: article.hero_image_id,
     slug: article.slug,
     seoTitle: article.seo_title,
     seoDescription: article.seo_description,

@@ -2,6 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 import {
+  IMAGE_ASSET_COLUMNS,
+  blockImageIds,
+  licensedImage,
+  type LicensedImage,
+} from "@contracts/index.ts";
+import {
   PUBLISHED_ARTICLE_COLUMNS,
   toPublicArticle,
   type PublicArticle,
@@ -34,3 +40,34 @@ export const getPublishedArticle = cache(async (slug: string): Promise<PublicArt
 
   return data ? toPublicArticle(data) : null;
 });
+
+/**
+ * Obrazy z blokow image artykulu: id -> obraz z licencja. Obraz bez licencji, AI albo
+ * usuniety nie trafia do mapy, wiec strona publiczna go pomija. Te same tagi co artykul:
+ * webhook publikacji odswieza je razem z trescia.
+ */
+export async function getArticleBlockImages(
+  article: Pick<PublicArticle, "slug" | "blocks">,
+): Promise<ReadonlyMap<string, LicensedImage>> {
+  const ids = blockImageIds(article.blocks);
+  if (ids.length === 0) {
+    return new Map();
+  }
+
+  const supabase = createPublicClient([CACHE_TAGS.articles, CACHE_TAGS.article(article.slug)]);
+  const { data, error } = await supabase
+    .from("image_assets")
+    .select(IMAGE_ASSET_COLUMNS)
+    .in("id", ids);
+
+  if (error) {
+    throw new Error(`Nie udalo sie odczytac obrazow artykulu ${article.slug}: ${error.message}`);
+  }
+
+  return new Map(
+    data.flatMap((row) => {
+      const image = licensedImage(row);
+      return image ? [[image.id, image] as const] : [];
+    }),
+  );
+}

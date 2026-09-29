@@ -18,4 +18,5 @@ export type {
 export * from "./facts.ts";
 export * from "./assessment.ts";
 export * from "./article.ts";
+export * from "./image.ts";
 export * from "./jobs.ts";

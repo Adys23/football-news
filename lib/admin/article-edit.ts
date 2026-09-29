@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { articleContentSchema, type ArticleBlock, type ArticleContent } from "@contracts/index.ts";
+import {
+  articleContentSchema,
+  heroImageSelectionSchema,
+  type ArticleBlock,
+  type ArticleContent,
+} from "@contracts/index.ts";
 
 const articleEditTargetSchema = z.object({
   articleId: z.uuid(),
@@ -137,18 +142,28 @@ function addedBlocks<T extends ArticleBlock["type"]>(
 /** Cytat to krotki fragment z atrybucja (AGENTS.md, zasada 10); kontrola kopiowania go pomija. */
 export const MAX_QUOTE_WORDS = 40;
 
+/** Obrazy z nowych lub zmienionych blokow image: tylko je trzeba sprawdzic w bibliotece. */
+export function addedImageIds(
+  before: readonly ArticleBlock[],
+  after: readonly ArticleBlock[],
+): string[] {
+  return [...new Set(addedBlocks(before, after, "image").map((block) => block.imageId))];
+}
+
 /**
- * Zasady edycji z panelu, ktorych nie wyraza schemat. Obraz wolno tylko zachowac albo usunac:
- * nowy wymaga wyboru z image_assets z licencja, ktorego panel jeszcze nie ma.
+ * Zasady edycji z panelu, ktorych nie wyraza schemat. Nowy lub zmieniony blok image musi
+ * wskazywac obraz z biblioteki (image_assets z licencja, nie AI; AGENTS.md, zasada 9):
+ * wgrywania ani generowania obrazow w panelu nie ma. Baza sprawdza to samo triggerem (0027).
  * Nowy lub zmieniony cytat musi miec autora i miescic sie w limicie slow.
  */
 export function editRuleIssues(
   before: readonly ArticleBlock[],
   after: readonly ArticleBlock[],
+  libraryImageIds: ReadonlySet<string>,
 ): string[] {
   const issues: string[] = [];
-  if (addedBlocks(before, after, "image").length > 0) {
-    issues.push("Zdjęcie można tylko zachować albo usunąć.");
+  if (addedImageIds(before, after).some((id) => !libraryImageIds.has(id))) {
+    issues.push("Zdjęcie musi pochodzić z biblioteki obrazów z licencją.");
   }
   for (const quote of addedBlocks(before, after, "quote")) {
     const words = quote.text.split(/\s+/).filter(Boolean).length;
@@ -161,6 +176,25 @@ export function editRuleIssues(
 
 export const ARTICLE_NOT_FOUND = "Artykuł nie istnieje.";
 
+export type HeroImageEdit = z.infer<typeof articleEditTargetSchema> & {
+  heroImageId: string | null;
+};
+
+/** Formularz obrazu glownego: pusty wybor to "bez obrazu". */
+export function parseHeroImageEdit(
+  formData: FormData,
+): { ok: true; data: HeroImageEdit } | { ok: false; state: ArticleEditState } {
+  const target = articleEditTargetSchema.safeParse({
+    articleId: formData.get("articleId"),
+    expectedUpdatedAt: formData.get("expectedUpdatedAt"),
+  });
+  const hero = heroImageSelectionSchema.safeParse(formData.get("heroImageId") ?? "");
+  if (!target.success || !hero.success) {
+    return { ok: false, state: { status: "error", message: "Formularz jest niekompletny." } };
+  }
+  return { ok: true, data: { ...target.data, heroImageId: hero.data } };
+}
+
 /** Kody bledow save_article_edit (migracja 0020) na komunikaty dla redaktora. */
 const SAVE_ERROR_MESSAGES = new Map([
   [
@@ -170,6 +204,9 @@ const SAVE_ERROR_MESSAGES = new Map([
   ["55000", "Artykuł nie jest już w recenzji, więc nie można go edytować."],
   ["P0002", ARTICLE_NOT_FOUND],
   ["42501", "Brak uprawnień do edycji artykułu."],
+  // 0027: obraz spoza biblioteki albo AI; te same kody zwracaja inne ograniczenia tabeli,
+  // ale tytul i tresc panel sprawdza wczesniej.
+  ["23514", "Zapis odrzucony: zdjęcie musi pochodzić z biblioteki, mieć licencję i nie być AI."],
 ]);
 
 export function saveErrorMessage(code: string | undefined): string | null {
