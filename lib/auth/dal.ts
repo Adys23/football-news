@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveAccess, type AuthProfile } from "@/lib/auth/roles";
-import { FORBIDDEN_PATH, LOGIN_PATH } from "@/lib/auth/redirects";
+import { forbiddenPath, LOGIN_PATH, type RequiredRole } from "@/lib/auth/redirects";
 
 /**
  * Profil zalogowanego uzytkownika, raz na render. getUser pyta serwer Auth,
@@ -37,7 +37,7 @@ export const getCurrentProfile = cache(async (): Promise<AuthProfile | null> => 
  * Autorytatywna kontrola dostepu. Wolaja ja wszystkie strony panelu i kazda
  * server action; proxy tylko optymistycznie przekierowuje bez sesji.
  */
-export async function requireRole(min: "editor" | "admin"): Promise<AuthProfile> {
+export async function requireRole(min: RequiredRole): Promise<AuthProfile> {
   const profile = await getCurrentProfile();
   const access = resolveAccess(profile, min);
 
@@ -45,7 +45,7 @@ export async function requireRole(min: "editor" | "admin"): Promise<AuthProfile>
     redirect(LOGIN_PATH);
   }
   if (access === "forbidden") {
-    redirect(FORBIDDEN_PATH);
+    redirect(forbiddenPath(min));
   }
 
   return profile;
