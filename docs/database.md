@@ -558,7 +558,7 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0012_jobs.sql`                    | `jobs`, funkcje kolejki, `llm_calls`                                                                                                                         |
 | `0013_settings_audit.sql`          | `settings` z wartościami domyślnymi, `audit_log`, trigger śladu zmian statusu artykułu                                                                       |
 | `0014_rls_policies.sql`            | polityki dla wszystkich tabel oraz bucketu Storage                                                                                                           |
-| `0015_cron.sql`                    | harmonogramy `pg_cron` wywołujące Edge Functions przez `pg_net`                                                                                              |
+| `0015_cron.sql`                    | harmonogramy `pg_cron` (nieaktywne); `fetch-sources` i `process-jobs` czytały URL i klucz z GUC `app.*` - od 0029 z Vault                                    |
 | `0016_ingestion_helpers.sql`       | `list_due_sources()`, `find_similar_stories()`                                                                                                               |
 | `0017_link_source_item.sql`        | unikalny `story_sources.source_item_id`, `link_source_item_to_story()` pod advisory lock                                                                     |
 | `0018_pipeline_hardening.sql`      | `defer_job()`, unikalność `facts` po `source_item_id`, pełny indeks `jobs.dedupe_key`, progi oceny w `settings`                                              |
@@ -572,13 +572,18 @@ Zapisy pipeline'u wykonuje wyłącznie `service_role` z Edge Functions. Panel re
 | `0026_public_provenance.sql`       | `public_article_sources()`, `public_article_facts()` dla strony publicznej; `article_updates` dla anona tylko z `approved_by`                                |
 | `0027_article_images_guard.sql`    | triggery `articles_enforce_images` i `image_assets_protect_used`, `article_revisions.hero_image_id`, `save_article_edit()` z `p_hero_image_id`               |
 | `0028_quality_report.sql`          | `quality_report_articles()`, `quality_report_category_totals()` (`definer`, tylko redakcja): dane raportu jakości bez dostępu do `audit_log` i `llm_calls`   |
+| `0029_cron_vault.sql`              | `invoke_edge_function()` (URL i klucz z Vault), polecenia harmonogramów `fetch-sources` i `process-jobs` przepięte na nią bez zmiany aktywności              |
 
 Kolejność wynika z kluczy obcych: taksonomia (`0006`) musi istnieć przed `stories`, media (`0009`) przed encjami i artykułami, a encje (`0010`) przed `transfers`, które wskazują na `stories`.
 
-Dwie rzeczy, o które łatwo się potknąć przy zmianach w `0015`:
+Harmonogramy `pg_cron` (0015, 0029):
 
-- Tabela `cron.job` należy do roli `supabase_admin`, a migracje wykonuje `postgres`. `update cron.job` kończy się błędem `permission denied for table job` - do włączania i wyłączania harmonogramów służy `cron.alter_job`.
-- Harmonogramy zakładamy nieaktywne. Włączenie ich to świadoma decyzja dla stagingu i produkcji, po ustawieniu sekretów w Vault.
+- `fetch-sources` (co 5 min) i `process-jobs` (co minutę) wołają `invoke_edge_function(p_function, p_timeout_ms)`. Funkcja (`security definer`, execute tylko dla właściciela, czyli `postgres`) czyta z Vault `cron_functions_url` (np. `https://<ref>.supabase.co/functions/v1`, lokalnie `http://kong:8000/functions/v1`) i `cron_service_role_key` i kolejkuje w `pg_net` `POST <url>/<funkcja>` z nagłówkiem `Authorization: Bearer <klucz>`. Brak `pg_net`, Vault albo któregoś sekretu to brak wywołania (`raise log`), nie błąd crona. Nazwa funkcji musi pasować do `^[a-z0-9][a-z0-9_-]*$` (inaczej `22023`). Sekrety zakłada się SQL-em jako `postgres`: `select vault.create_secret('<url>', 'cron_functions_url');` i `select vault.create_secret('<klucz service_role>', 'cron_service_role_key');`.
+- `requeue-stale-jobs`, `purge-raw-data` i `purge-done-jobs` to czysty SQL, bez sekretów.
+- Komentarz w `0015` mówi o Vault i o aktywacji przez CI, ale kod 0015 czytał GUC `app.functions_url` i `app.service_role_key`, a CI niczego nie aktywuje. Stan faktyczny opisuje ta sekcja; 0015 jest niezmienialna, poprawka to 0029.
+- Tabela `cron.job` należy do roli `supabase_admin`, a migracje wykonuje `postgres`. `update cron.job` kończy się błędem `permission denied for table job` - do włączania i wyłączania harmonogramów, a także do zmiany polecenia, służy `cron.alter_job`.
+- Harmonogramy zakładamy nieaktywne, także lokalnie i w CI. Włączenie ich to świadoma decyzja dla stagingu i produkcji, po ustawieniu sekretów w Vault: `select cron.alter_job(jobid, active := true) from cron.job where jobname in (...)`.
+- Migracja bez `pg_cron` pomija harmonogramy z ostrzeżeniem, a `invoke_edge_function` powstaje zawsze.
 
 `seed.sql`: 11 źródeł startowych (oficjalne kanały klubów i lig, jeden uznany dziennikarz, duże serwisy, jeden agregator), kategorie `transfery`, `pilka-nozna` i `ekstraklasa`, ligi, kluby z aliasami i zawodnicy dla testów rozpoznawania encji, konta dla środowiska lokalnego: `redaktor@local.test` (admin), `edytor@local.test` (editor) i `czytelnik@local.test` (viewer).
 

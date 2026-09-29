@@ -1374,6 +1374,10 @@ export type Database = {
           story_id: string;
         }[];
       };
+      invoke_edge_function: {
+        Args: { p_function: string; p_timeout_ms?: number };
+        Returns: number;
+      };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_editor: { Args: Record<PropertyKey, never>; Returns: boolean };
       link_source_item_to_story: {
