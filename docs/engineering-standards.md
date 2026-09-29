@@ -289,7 +289,7 @@ Rozważone i odrzucone:
 | `quality` (typy, eslint, prettier)                | działa                    |                                                                                          |
 | `unit` (vitest + progi pokrycia)                  | działa                    | progi dla `_shared/lib/**` i `_shared/contracts/**`                                      |
 | `deno` (`deno check`, `deno lint`)                | działa                    | typy i linter Edge Functions w runtime Deno                                              |
-| `db` (migracje, `db lint`, pgTAP, zgodność typów) | działa                    | 25 testów pgTAP: RLS, trigger publikacji, kolejka                                        |
+| `db` (migracje, `db lint`, pgTAP, zgodność typów) | działa                    | testy pgTAP w `supabase/tests`: RLS, trigger publikacji, kolejka, audyt, SEO             |
 | `build` (`next build`)                            | działa                    | bez dostępu do bazy i kluczy                                                             |
 | `security` (`npm audit`, skan sekretów)           | działa                    |                                                                                          |
 | guard niezmienialności migracji                   | brak w CI                 | wymuszany przez hook `beforeShellExecution` i review; do CI wchodzi razem z pierwszym PR |
