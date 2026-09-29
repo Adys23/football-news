@@ -115,6 +115,12 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+# Bucket z 0009_media.sql. Tu tylko zasiew lokalnych plikow testowych dla seed.sql
+# (supabase db reset i supabase seed buckets); ustawienia bucketu zostaja w migracji.
+[storage.buckets.article-images]
+public = true
+objects_path = "./seed-images"
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false

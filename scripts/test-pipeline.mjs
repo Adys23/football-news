@@ -319,7 +319,7 @@ console.log("test:pipeline OK: kontrola jakosci -> artykul w review, 7 wywolan L
 const editor = await createLocalEditorClient();
 const { data: reviewed, error: reviewedError } = await editor
   .from("articles")
-  .select("slug, lead, content, updated_at")
+  .select("slug, lead, content, hero_image_id, updated_at")
   .eq("id", article.id)
   .single();
 if (reviewedError) {
@@ -332,6 +332,7 @@ const { error: editError } = await editor.rpc("save_article_edit", {
   p_title: "Manchester United przedłużył kontrakt z Bruno Fernandesem do 2028 roku",
   p_lead: reviewed.lead,
   p_content: reviewed.content,
+  p_hero_image_id: reviewed.hero_image_id,
 });
 if (editError) {
   fail(`save_article_edit: ${editError.message}`);

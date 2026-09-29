@@ -46,6 +46,7 @@ export async function saveArticleMeta(
     title,
     lead,
     content: article.content,
+    heroImageId: article.heroImageId,
   });
 }
 
@@ -79,6 +80,7 @@ export async function saveArticleContent(
     title: article.title,
     lead: article.lead,
     content,
+    heroImageId: article.heroImageId,
   });
 }
 
@@ -86,7 +88,7 @@ async function saveArticleEdit(
   articleId: string,
   expectedUpdatedAt: string,
   storyId: string,
-  edit: { title: string; lead: string; content: Json },
+  edit: { title: string; lead: string; content: Json; heroImageId: string | null },
 ): Promise<ArticleEditState> {
   const check = await checkArticleEdit(storyId, edit);
   if (!check.ok) {
@@ -107,6 +109,8 @@ async function saveArticleEdit(
     p_title: edit.title,
     p_lead: edit.lead,
     p_content: edit.content,
+    // Generator typow nie oznacza argumentow funkcji jako nullable, a null to "bez obrazu" (0027).
+    p_hero_image_id: edit.heroImageId as string,
   });
 
   if (error) {

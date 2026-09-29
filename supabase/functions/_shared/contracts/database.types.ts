@@ -84,6 +84,7 @@ export type Database = {
           content: Json | null;
           created_at: string;
           edited_by: string | null;
+          hero_image_id: string | null;
           id: string;
           lead: string | null;
           title: string | null;
@@ -93,6 +94,7 @@ export type Database = {
           content?: Json | null;
           created_at?: string;
           edited_by?: string | null;
+          hero_image_id?: string | null;
           id?: string;
           lead?: string | null;
           title?: string | null;
@@ -102,6 +104,7 @@ export type Database = {
           content?: Json | null;
           created_at?: string;
           edited_by?: string | null;
+          hero_image_id?: string | null;
           id?: string;
           lead?: string | null;
           title?: string | null;
@@ -119,6 +122,13 @@ export type Database = {
             columns: ["edited_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "article_revisions_hero_image_id_fkey";
+            columns: ["hero_image_id"];
+            isOneToOne: false;
+            referencedRelation: "image_assets";
             referencedColumns: ["id"];
           },
         ];
@@ -1307,6 +1317,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      article_block_image_ids: { Args: { p_content: Json }; Returns: string[] };
       claim_jobs: {
         Args: {
           p_limit?: number;
@@ -1454,6 +1465,7 @@ export type Database = {
           p_article_id: string;
           p_content: Json;
           p_expected_updated_at: string;
+          p_hero_image_id: string;
           p_lead: string;
           p_title: string;
         };
