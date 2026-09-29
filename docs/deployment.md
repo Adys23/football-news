@@ -18,26 +18,26 @@ Konta zakłada właściciel: organizacja Supabase z projektem w `eu-central-1` o
 
 ## 2. Zmienne i sekrety
 
-| Nazwa                                                   | Gdzie                               | Wrażliwa | Uwagi                                                                                            |
-| ------------------------------------------------------- | ----------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`                              | Vercel (Production, Preview)        | nie      | `https://<ref>.supabase.co`. Wchodzi do builda, więc po zmianie potrzebny jest redeploy.         |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                         | Vercel (Production, Preview)        | nie      | klucz `anon`, publiczny z definicji, chroni go RLS                                               |
-| `NEXT_PUBLIC_SITE_URL`                                  | Vercel (Production; Preview osobno) | nie      | `https://<domena>` bez końcowego `/`. Z niego powstają canonicale, sitemapy, RSS i `robots.txt`. |
-| `SUPABASE_SERVICE_ROLE_KEY`                             | nie ustawiamy na Vercelu            | **tak**  | aplikacja go nie używa (`lib/supabase/admin.ts` nie ma wywołań), więc Vercel go nie dostaje      |
-| `REVALIDATE_WEBHOOK_SECRET`                             | Vercel (Production)                 | **tak**  | ta sama wartość w Vault jako `revalidate_webhook_secret`                                         |
-| `OPENAI_API_KEY`                                        | Supabase secrets (Edge Functions)   | **tak**  | `npm run deploy:supabase -- --secrets-file=...`                                                  |
-| `LLM_ENABLED`                                           | Supabase secrets (Edge Functions)   | nie      | najpierw `false`, a `true` dopiero po smoke teście                                               |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` w funkcjach | Supabase, wstrzykuje je sam         | **tak**  | nie ustawiamy ich; `secrets set` je odrzuca                                                      |
-| `revalidate_webhook_url`                                | Vault                               | nie      | `https://<domena>/api/revalidate`                                                                |
-| `revalidate_webhook_secret`                             | Vault                               | **tak**  | równy `REVALIDATE_WEBHOOK_SECRET`                                                                |
-| `cron_functions_url`                                    | Vault                               | nie      | `https://<ref>.supabase.co/functions/v1`                                                         |
-| `cron_service_role_key`                                 | Vault                               | **tak**  | klucz `service_role` projektu (patrz §4 krok 7)                                                  |
-| `SUPABASE_ACCESS_TOKEN`                                 | tylko terminal osoby wdrażającej    | **tak**  | token osobisty do `deploy:supabase`, nie trafia do żadnego pliku w repo                          |
-| `SUPABASE_DB_PASSWORD`                                  | tylko terminal osoby wdrażającej    | **tak**  | hasło bazy projektu, jak wyżej                                                                   |
+| Nazwa                                                   | Gdzie                             | Wrażliwa | Uwagi                                                                                            |
+| ------------------------------------------------------- | --------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`                              | Vercel (Production)               | nie      | `https://<ref>.supabase.co`. Wchodzi do builda, więc po zmianie potrzebny jest redeploy.         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                         | Vercel (Production)               | nie      | klucz `anon`, publiczny z definicji, chroni go RLS                                               |
+| `NEXT_PUBLIC_SITE_URL`                                  | Vercel (Production)               | nie      | `https://<domena>` bez końcowego `/`. Z niego powstają canonicale, sitemapy, RSS i `robots.txt`. |
+| `SUPABASE_SERVICE_ROLE_KEY`                             | nie ustawiamy na Vercelu          | **tak**  | aplikacja go nie używa (`lib/supabase/admin.ts` nie ma wywołań), więc Vercel go nie dostaje      |
+| `REVALIDATE_WEBHOOK_SECRET`                             | Vercel (Production)               | **tak**  | ta sama wartość w Vault jako `revalidate_webhook_secret`                                         |
+| `OPENAI_API_KEY`                                        | Supabase secrets (Edge Functions) | **tak**  | `npm run deploy:supabase -- --secrets-file=...`                                                  |
+| `LLM_ENABLED`                                           | Supabase secrets (Edge Functions) | nie      | najpierw `false`, a `true` dopiero po smoke teście                                               |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` w funkcjach | Supabase, wstrzykuje je sam       | **tak**  | nie ustawiamy ich; `secrets set` je odrzuca                                                      |
+| `revalidate_webhook_url`                                | Vault                             | nie      | `https://<domena>/api/revalidate`                                                                |
+| `revalidate_webhook_secret`                             | Vault                             | **tak**  | równy `REVALIDATE_WEBHOOK_SECRET`                                                                |
+| `cron_functions_url`                                    | Vault                             | nie      | `https://<ref>.supabase.co/functions/v1`                                                         |
+| `cron_service_role_key`                                 | Vault                             | **tak**  | klucz `service_role` projektu (patrz §4 krok 7)                                                  |
+| `SUPABASE_ACCESS_TOKEN`                                 | tylko terminal osoby wdrażającej  | **tak**  | token osobisty do `deploy:supabase`, nie trafia do żadnego pliku w repo                          |
+| `SUPABASE_DB_PASSWORD`                                  | tylko terminal osoby wdrażającej  | **tak**  | hasło bazy projektu, jak wyżej                                                                   |
 
 Plik sekretów Edge Functions trzymaj poza repozytorium albo jako `supabase/.env.production` (ignorowany przez `.gitignore`, wzorzec `.env*`). Powinien zawierać wyłącznie `OPENAI_API_KEY` i `LLM_ENABLED`.
 
-Preview na Vercelu: panel działa na sesji redaktora i RLS. Podgląd z URL-em i kluczem `anon` produkcji pozwala więc zalogowanemu redaktorowi zapisywać do bazy produkcyjnej kodem z niezrecenzowanego PR-a. Dlatego zmienne Preview wskazują na osobny projekt Supabase (staging, [architecture.md §12](architecture.md#12-środowiska)), a `NEXT_PUBLIC_SITE_URL` na adres podglądu. Dopóki stagingu nie ma, wyłącz Preview Deployments albo włącz Vercel Deployment Protection i nie loguj się w podglądach.
+Preview na Vercelu jest **wyłączony** (decyzja właściciela, 2026-09-29). Panel działa na sesji redaktora i RLS, więc podgląd z URL-em i kluczem `anon` produkcji pozwoliłby zalogowanemu redaktorowi zapisywać do bazy produkcyjnej kodem z niezrecenzowanego PR-a. Zmiany sprawdzamy lokalnie na pełnym stacku z seedem. Gdy podglądy będą potrzebne, zmienne Preview muszą wskazywać na osobny projekt Supabase (staging, [architecture.md §12](architecture.md#12-środowiska)), a `NEXT_PUBLIC_SITE_URL` na adres podglądu - dopiero wtedy włączamy Preview Deployments.
 
 ## 3. Skrypty
 
@@ -69,7 +69,7 @@ Skrypt wdrożeniowy celowo nie ustawia Vault ani crona: to SQL z sekretami, któ
    ```
    Bez cennika `llm_calls.cost_usd = null`, więc dzienny limit `daily_llm_budget_usd` nie widzi wydatków.
 4. **Pierwszy administrator.** Postępuj według [runbook.md §14](runbook.md#14-nowe-konto-redaktora): Authentication -> Add user w dashboardzie, potem `insert into profiles (...)` z rolą `admin`.
-5. **Vercel.** Zaimportuj repozytorium (framework wykryje się sam), ustaw zmienne z §2 dla Production, dodaj domenę i rekordy DNS według instrukcji Vercela. Pierwszy deploy produkcyjny zrób po ustawieniu zmiennych, bo `NEXT_PUBLIC_*` wchodzą do builda.
+5. **Vercel.** Zaimportuj repozytorium (framework wykryje się sam), wyłącz podglądy (Settings -> Git -> Ignored Build Step: `if [ "$VERCEL_ENV" = "production" ]; then exit 1; else exit 0; fi`), ustaw zmienne z §2 dla Production, dodaj domenę i rekordy DNS według instrukcji Vercela. Pierwszy deploy produkcyjny zrób po ustawieniu zmiennych, bo `NEXT_PUBLIC_*` wchodzą do builda.
 6. **Webhook publikacji (Vault).** Ustaw sekrety według [runbook.md §8](runbook.md#8-publikacja-nie-pojawia-się-na-stronie), krok 3. `revalidate_webhook_secret` musi być równy `REVALIDATE_WEBHOOK_SECRET` na Vercelu.
 7. **Cron (Vault i aktywacja).** Ustaw sekrety i włącz harmonogramy według [runbook.md §15](runbook.md#15-harmonogramy-cron-na-produkcji). Klucz w `cron_service_role_key` musi być tym samym kluczem, który funkcje dostają jako `SUPABASE_SERVICE_ROLE_KEY`, bo `assertServiceRole` porównuje go dosłownie. W projekcie z nowymi kluczami API (`sb_secret_...`) użyj klucza `service_role` z zakładki Legacy API Keys.
 8. **Auth.** Authentication -> URL Configuration: `Site URL` = `https://<domena>`, Redirect URLs = `https://<domena>/**`. Nie używaj `supabase config push`, bo `config.toml` jest lokalny i nadpisałby produkcję adresami `localhost`.
@@ -78,7 +78,7 @@ Skrypt wdrożeniowy celowo nie ustawia Vault ani crona: to SQL z sekretami, któ
 
 ## 5. Kolejne wdrożenia
 
-- Kod Next.js wdraża Vercel przy merge'u do `main` (integracja z GitHubem), a podglądy powstają dla PR-ów.
+- Kod Next.js wdraża Vercel przy merge'u do `main` (integracja z GitHubem). Podglądy PR-ów są wyłączone (§2).
 - Migracje i funkcje wdraża ręcznie `npm run deploy:supabase` z aktualnego `main`, **przed** merge'em zmian w Next.js, które od nich zależą. Migracje muszą być wstecznie zgodne z działającą wersją strony: najpierw dodajemy, a usuwamy dopiero w kolejnym wydaniu.
 - Numery migracji rosną monotonicznie. Jeśli migracja o niższym numerze trafi na `main` po wdrożeniu wyższej, `db push` jej nie przyjmie. Wymaga to świadomego `supabase db push --include-all` po sprawdzeniu, że kolejność nie ma znaczenia.
 - Zmiana `NEXT_PUBLIC_*` wymaga redeployu na Vercelu. Zmiana sekretu funkcji (`secrets set`) działa od następnego wywołania.
