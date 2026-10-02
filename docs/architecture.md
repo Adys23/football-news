@@ -160,7 +160,8 @@ Widok recenzji (`app/admin/artykuly/[id]/page.tsx`, dane w `lib/admin/review-dat
 
 Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `saveArticleMeta`) oraz treści (`components/admin/BlockEditor.tsx`, server action `saveArticleContent`, obie w `app/admin/artykuly/[id]/actions.ts`) jest dostępna tylko dla artykułów `review`:
 
-- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty i listy; w ramce z faktami zmienia tylko tytuł. Zdjęcie można tylko zachować albo usunąć, a nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów (`editRuleIssues`), bo kontrola kopiowania pomija cytaty,
+- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty, listy i zdjęcia; w ramce z faktami zmienia tylko tytuł. Nowy lub zmieniony blok `image` wskazuje obraz wybrany z biblioteki (`lib/admin/image-library.ts`: `image_assets` z licencją, nie AI, w kontrakcie `licensedImage`); `editRuleIssues` odrzuca `imageId` spoza niej, a trigger `articles_enforce_images` (0027) robi to samo w bazie. Nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów, bo kontrola kopiowania pomija cytaty,
+- zdjęcie główne wybiera `components/admin/HeroImageForm.tsx` (server action `saveArticleHero`) spośród obrazów `kind = 'hero'` z biblioteki albo „Bez zdjęcia”. Zapis idzie przez `save_article_edit` z bieżącym tytułem, leadem i treścią, bez kontroli tekstu, bo tekst się nie zmienia. Wgrywania ani generowania obrazów w panelu nie ma (V2, `docs/roadmap.md`),
 - treść waliduje `articleContentSchema` z komunikatami po polsku: w edytorze informacyjnie, w server action jako warunek zapisu,
 
 - przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
@@ -186,6 +187,12 @@ Widok zdrowia źródeł (`app/admin/zrodla/page.tsx`, te same pliki `lib/admin/o
 - stan wyliczany z `active` i `consecutive_failures` wobec `SOURCE_FAILURE_LIMIT` z `_shared/lib/circuit-breaker.ts` (ten sam próg co w `fetch-source`); źródła z problemami na górze,
 - ostatni błąd pobierania (najnowszy `jobs.error` dla `FETCH_SOURCE` danego źródła) tylko dla admina, bo `jobs` jest w RLS tylko dla admina,
 - przełącznik `active` tylko dla admina: server action z `requireRole('admin')` i zodem, `update sources` na sesji (`sources_admin_write`) z warunkiem na poprzedni stan, więc nieaktualny formularz nic nie zmienia. Włączenie zeruje w tym samym zapisie `consecutive_failures`, a trigger `sources_audit_change` zapisuje jedną zmianę `source_change`.
+
+Raport jakości (`app/admin/jakosc/page.tsx`, dane w `lib/admin/quality-data.ts`, logika w `lib/admin/quality.ts`) czyta każdy redaktor, na sesji, bez `service_role`:
+
+- okno 7 / 30 / 60 dni z parametru `?okno=` (zod, domyślnie 30); artykuły przez RPC `quality_report_articles` z 60 dni (stronami po 1000 wierszy, bo tyle wynosi `max_rows`), koszt przez `quality_report_category_totals` z wybranego okna. Obie funkcje z migracji `0028` są `security definer` i dają redaktorowi tylko powody odrzuceń i agregaty kosztu, bez dostępu do `audit_log` i `llm_calls`. Wiersze RPC waliduje zod, bo wygenerowany typ nie pokazuje pól nullable,
+- per kategoria: czekające na decyzję, opublikowane i odrzucone w oknie, klasyfikacja edycji redaktora (bez edycji / tylko tytuł lub lead / treść), udział bez edycji jako dolna granica „bez poprawek merytorycznych”, średnie ocen i rozrzut jakości, koszt, koszt na opublikowany, wywołania bez ceny, nieudane i eskalowane (model równy `settings.model_escalation`),
+- postęp względem kryteriów automatycznej publikacji z `docs/roadmap.md` (`AUTO_PUBLISH_CRITERIA`, stałe tylko do wyświetlania): 60 dni od pierwszej publikacji, ponad 95% bez edycji zawsze na oknie 60 dni („spełnione” albo „nie wykazane”), sygnały halucynacji z 30 dni (odrzucenia, blokady `unsupported_claims`) jako „nie mierzone wprost”. Raport nie ma żadnych akcji i nie przełącza `auto_publish_enabled`.
 
 ### 3.8 Delivery / SEO
 
@@ -371,6 +378,8 @@ Strategia renderowania:
 - Dane strukturalne `NewsArticle` z `headline`, `image`, `datePublished`, `dateModified`, `author` (prawdziwa osoba z redakcji, ze stroną autora), `publisher`. Do tego `BreadcrumbList`. Traktujemy to jako higienę, nie jako sposób na wejście do Discover - Google wprost mówi, że specjalne dane strukturalne nie są do Discover wymagane.
 - `max-image-preview:large` w `robots` meta.
 - Obraz główny minimum 1200 px szerokości, proporcje 16:9, z wypełnionym `alt`. Wymuszone ograniczeniem `CHECK (width >= 1200)` w `image_assets`.
+- Strona artykułu renderuje obraz główny pod nagłówkiem i obrazy bloków `image` przez `components/article/ArticleImage.tsx` (`next/image` z wymiarami z bazy, `<figcaption>` z podpisem i atrybucją licencji z `imageAttribution`). Obraz główny ma `preload` (Next 16 zastąpił tym `priority`), obrazy bloków ładują się leniwie. Obrazy bloków pobiera `getArticleBlockImages` jednym zapytaniem z tagami artykułu; obraz bez licencji, AI albo usunięty jest pomijany.
+- `next.config.ts` ustawia `images.qualities: [75]` (wymagane od Next 16) i `images.remotePatterns` tylko dla `/storage/v1/object/public/article-images/**` projektu z `NEXT_PUBLIC_SUPABASE_URL` (`lib/image-delivery.ts`). `dangerouslyAllowLocalIP` zostaje wyłączone: obraz z adresu lokalnego (lokalny Supabase `127.0.0.1:54321`) albo spoza bucketu idzie z `unoptimized` (`shouldOptimizeImage`), a produkcja optymalizuje normalnie.
 - Widoczna lista źródeł z linkami oraz informacja o roli AI i o tym, że tekst sprawdził redaktor. To jednocześnie uczciwość wobec czytelnika i sygnał E-E-A-T.
 
 ### 8.2 Na poziomie serwisu
@@ -438,4 +447,4 @@ Metryki, które prowadzą decyzje o automatyzacji: udział artykułów wymagają
   Na maszynie deweloperskiej działa równolegle lokalny stack innego projektu, zajmujący porty `54121` - `54127`. Dlatego `supabase/config.toml` ma jawnie przypisany `project_id = "football-news"` i własny blok portów, zamiast polegać na domyślnych: API `54321`, baza `54322`, Studio `54323`, Inbucket `54324`, Analytics `54327`. Bez tego `supabase start` albo wejdzie w konflikt portów, albo zatrzyma stack drugiego projektu.
 
 - **Staging**: osobny projekt Supabase, cron wyłączony domyślnie, ręczne uruchamianie jobów.
-- **Produkcja**: Supabase Cloud plus Vercel. Migracje wyłącznie przez `supabase db push` w CI, nigdy ręcznie w panelu.
+- **Produkcja**: Supabase Cloud (`eu-central-1`) plus Vercel (`fra1`, `vercel.json`). Migracje i Edge Functions wyłącznie przez `npm run deploy:supabase` (`supabase db push` i `functions deploy`), nigdy ręcznie w panelu. Deploy z CI nie jest skonfigurowany. Harmonogramy czytają adres funkcji i klucz z Vault (0029). Procedura: [deployment.md](deployment.md).

@@ -1,9 +1,31 @@
-import { articleContentSchema, type ArticleBlock } from "@contracts/index.ts";
+import {
+  articleContentSchema,
+  licensedImage,
+  type ArticleBlock,
+  type LicensedImage,
+  type Tables,
+} from "@contracts/index.ts";
 import type { Json } from "@contracts/index.ts";
 
 /** Kolumny artykulu czytane przez strone publiczna. Jawna lista, bez select *. */
 export const PUBLISHED_ARTICLE_COLUMNS =
-  "id, slug, title, lead, content, seo_title, seo_description, published_at, updated_at, ai_generated, categories(name, slug), authors(name, slug, role_title), article_updates(id, body, published_at, approved_by), hero_image:image_assets!articles_hero_image_id_fkey(url, width, height, alt, license)";
+  "id, slug, title, lead, content, seo_title, seo_description, published_at, updated_at, ai_generated, categories(name, slug), authors(name, slug, role_title), article_updates(id, body, published_at, approved_by), hero_image:image_assets!articles_hero_image_id_fkey(id, kind, url, width, height, alt, license, source, photographer, copyright, is_ai_generated)";
+
+/** Wiersz image_assets w kolumnach IMAGE_ASSET_COLUMNS. */
+export type ImageAssetRow = Pick<
+  Tables<"image_assets">,
+  | "id"
+  | "kind"
+  | "url"
+  | "width"
+  | "height"
+  | "alt"
+  | "license"
+  | "source"
+  | "photographer"
+  | "copyright"
+  | "is_ai_generated"
+>;
 
 export interface PublishedArticleRow {
   id: string;
@@ -24,13 +46,7 @@ export interface PublishedArticleRow {
     published_at: string;
     approved_by: string | null;
   }[];
-  hero_image: {
-    url: string;
-    width: number;
-    height: number;
-    alt: string;
-    license: string;
-  } | null;
+  hero_image: ImageAssetRow | null;
 }
 
 export interface PublicArticleUpdate {
@@ -39,12 +55,8 @@ export interface PublicArticleUpdate {
   publishedAt: string;
 }
 
-export interface PublicImage {
-  url: string;
-  width: number;
-  height: number;
-  alt: string;
-}
+/** Obraz z licencja, nie AI, z podpisem praw (kontrakt image.ts). */
+export type PublicImage = LicensedImage;
 
 export interface PublicArticle {
   id: string;
@@ -61,7 +73,7 @@ export interface PublicArticle {
   author: { name: string; slug: string; roleTitle: string | null } | null;
   /** Od najnowszej. */
   updates: PublicArticleUpdate[];
-  /** Tylko obraz z licencja (AGENTS.md §4.9); inaczej null. */
+  /** Tylko obraz z licencja, nie AI (AGENTS.md §4.9); inaczej null. */
   heroImage: PublicImage | null;
 }
 
@@ -98,14 +110,6 @@ export function toPublicArticle(row: PublishedArticleRow): PublicArticle {
       .filter((update) => update.approved_by !== null)
       .map((update) => ({ id: update.id, body: update.body, publishedAt: update.published_at }))
       .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
-    heroImage: toLicensedImage(row.hero_image),
+    heroImage: licensedImage(row.hero_image),
   };
-}
-
-function toLicensedImage(image: PublishedArticleRow["hero_image"]): PublicImage | null {
-  if (!image || image.license.trim().length === 0) {
-    return null;
-  }
-
-  return { url: image.url, width: image.width, height: image.height, alt: image.alt };
 }

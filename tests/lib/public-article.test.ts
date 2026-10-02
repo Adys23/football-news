@@ -48,13 +48,34 @@ describe("toPublicArticle", () => {
     expect(article.updates.map((update) => update.id)).toEqual(["u2", "u1"]);
   });
 
-  it("keeps a hero image only when it has a license", () => {
-    const image = { url: "https://cdn.example/a.jpg", width: 1600, height: 900, alt: "Stadion" };
+  it("keeps a hero image only when it has a license and is not AI generated", () => {
+    const image = {
+      id: "77777777-7777-4777-8777-777777777771",
+      kind: "hero" as const,
+      url: "https://cdn.example/a.jpg",
+      width: 1600,
+      height: 900,
+      alt: "Stadion",
+      license: "CC BY 4.0",
+      source: "PAP",
+      photographer: "Jan Nowak",
+      copyright: null,
+      is_ai_generated: false,
+    };
 
-    expect(
-      toPublicArticle(row({ hero_image: { ...image, license: "CC BY 4.0" } })).heroImage,
-    ).toEqual(image);
+    expect(toPublicArticle(row({ hero_image: image })).heroImage).toEqual({
+      id: image.id,
+      kind: "hero",
+      url: image.url,
+      width: 1600,
+      height: 900,
+      alt: "Stadion",
+      attribution: "Fot. Jan Nowak / PAP, CC BY 4.0",
+    });
     expect(toPublicArticle(row({ hero_image: { ...image, license: "  " } })).heroImage).toBeNull();
+    expect(
+      toPublicArticle(row({ hero_image: { ...image, is_ai_generated: true } })).heroImage,
+    ).toBeNull();
   });
 
   it("throws on content that does not match the block schema", () => {

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { blockImageIds } from "@contracts/index.ts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleDecision } from "@/components/admin/ArticleDecision";
 import { ArticleMetaForm } from "@/components/admin/ArticleMetaForm";
 import { BlockEditor } from "@/components/admin/BlockEditor";
+import { HeroImageForm } from "@/components/admin/HeroImageForm";
+import { ArticleImage } from "@/components/article/ArticleImage";
 import { BlockRenderer } from "@/components/article/BlockRenderer";
 import { FactTable } from "@/components/admin/FactTable";
 import { ScoreBadge } from "@/components/admin/ScoreBadge";
@@ -36,6 +39,7 @@ import {
   publishBlockers,
   seoRefreshPending,
 } from "@/lib/admin/publish";
+import { getImageLibraryForArticle } from "@/lib/admin/image-library";
 import { getArticleForReview } from "@/lib/admin/review-data";
 import { requireRole } from "@/lib/auth/dal";
 
@@ -99,6 +103,12 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
 
   const { story, scores, assessment, sources } = article;
   const content = parseContent(article.content);
+  const library = await getImageLibraryForArticle([
+    ...(article.heroImageId ? [article.heroImageId] : []),
+    ...(content.ok ? blockImageIds(content.content.blocks) : []),
+  ]);
+  const images = new Map(library.map((image) => [image.id, image]));
+  const heroImage = article.heroImageId ? images.get(article.heroImageId) : undefined;
   const issues = issuesByBlock(
     parseIssues(scores?.issues),
     content.ok ? content.content.blocks.length : 0,
@@ -137,11 +147,21 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
       <article className="mt-6">
         <h1 className="text-2xl font-semibold tracking-tight">{article.title}</h1>
         {article.lead ? <p className="mt-4 text-lg text-neutral-700">{article.lead}</p> : null}
+        {heroImage ? (
+          <div className="mt-6">
+            <ArticleImage image={heroImage} />
+          </div>
+        ) : article.heroImageId ? (
+          <p className="mt-6 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+            Zdjęcie główne ({article.heroImageId}) nie spełnia zasad biblioteki.
+          </p>
+        ) : null}
         <div className="mt-6">
           {content.ok ? (
             <BlockRenderer
               blocks={content.content.blocks}
               factStatements={factStatementsById(article.facts)}
+              images={images}
               renderAfter={(index) => {
                 const blockIssues = issues.byBlock.get(index);
                 return blockIssues ? <IssueList issues={blockIssues} /> : null;
@@ -187,6 +207,13 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
             title={article.title}
             lead={article.lead ?? ""}
           />
+          <h3 className="mt-8 font-semibold">Zdjęcie główne</h3>
+          <HeroImageForm
+            articleId={article.id}
+            updatedAt={article.updatedAt}
+            heroImageId={article.heroImageId}
+            library={library}
+          />
           <h3 className="mt-8 font-semibold">Treść</h3>
           {content.ok ? (
             <BlockEditor
@@ -194,6 +221,7 @@ export default async function ArticleReviewPage({ params }: { params: Promise<{ 
               updatedAt={article.updatedAt}
               blocks={content.content.blocks}
               factStatements={Object.fromEntries(factStatementsById(article.facts))}
+              library={library}
             />
           ) : (
             <p className="mt-2 text-sm text-neutral-600">

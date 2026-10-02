@@ -32,6 +32,16 @@ function article(overrides: Partial<PublicArticle> = {}): PublicArticle {
   };
 }
 
+const HERO = {
+  id: "77777777-7777-4777-8777-777777777771",
+  kind: "hero",
+  url: "",
+  width: 1600,
+  height: 900,
+  alt: "Stadion",
+  attribution: "Fot. Jan Nowak / PAP, CC BY 4.0",
+} as const;
+
 describe("absoluteUrl", () => {
   it("resolves paths against the site url and keeps absolute urls", () => {
     expect(absoluteUrl(SITE_URL, "/transfery/abc")).toBe("https://newsroom.example/transfery/abc");
@@ -92,7 +102,7 @@ describe("buildNewsArticleJsonLd", () => {
     const jsonLd = buildNewsArticleJsonLd(
       article({
         seoDescription: "Opis SEO.",
-        heroImage: { url: "/storage/hero.jpg", width: 1600, height: 900, alt: "Stadion" },
+        heroImage: { ...HERO, url: "/storage/hero.jpg" },
       }),
       SITE_URL,
     );
@@ -168,7 +178,7 @@ describe("buildArticleMetadata", () => {
     const metadata = buildArticleMetadata(
       article({
         seoTitle: "Fernandes zostaje w United do 2029 roku",
-        heroImage: { url: "https://cdn.example/a.jpg", width: 1600, height: 900, alt: "Stadion" },
+        heroImage: { ...HERO, url: "https://cdn.example/a.jpg" },
         updates: [{ id: "u1", body: "Nowe", publishedAt: "2026-09-28T12:00:00Z" }],
       }),
       SITE_URL,

@@ -84,6 +84,7 @@ export type Database = {
           content: Json | null;
           created_at: string;
           edited_by: string | null;
+          hero_image_id: string | null;
           id: string;
           lead: string | null;
           title: string | null;
@@ -93,6 +94,7 @@ export type Database = {
           content?: Json | null;
           created_at?: string;
           edited_by?: string | null;
+          hero_image_id?: string | null;
           id?: string;
           lead?: string | null;
           title?: string | null;
@@ -102,6 +104,7 @@ export type Database = {
           content?: Json | null;
           created_at?: string;
           edited_by?: string | null;
+          hero_image_id?: string | null;
           id?: string;
           lead?: string | null;
           title?: string | null;
@@ -119,6 +122,13 @@ export type Database = {
             columns: ["edited_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "article_revisions_hero_image_id_fkey";
+            columns: ["hero_image_id"];
+            isOneToOne: false;
+            referencedRelation: "image_assets";
             referencedColumns: ["id"];
           },
         ];
@@ -1307,6 +1317,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      article_block_image_ids: { Args: { p_content: Json }; Returns: string[] };
       claim_jobs: {
         Args: {
           p_limit?: number;
@@ -1362,6 +1373,10 @@ export type Database = {
           similarity: number;
           story_id: string;
         }[];
+      };
+      invoke_edge_function: {
+        Args: { p_function: string; p_timeout_ms?: number };
+        Returns: number;
       };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_editor: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -1439,6 +1454,41 @@ export type Database = {
         };
         Returns: string;
       };
+      quality_report_articles: {
+        Args: { p_since: string };
+        Returns: {
+          article_id: string;
+          category_id: string;
+          checked_at: string;
+          clickbait: number;
+          content_edited: boolean;
+          editor_revisions: number;
+          factual_accuracy: number;
+          lead_edited: boolean;
+          originality: number;
+          published_at: string;
+          quality: number;
+          reject_reason: string;
+          rejected_at: string;
+          seo: number;
+          status: Database["public"]["Enums"]["article_status"];
+          title: string;
+          title_edited: boolean;
+          unsupported_claims: number;
+        }[];
+      };
+      quality_report_category_totals: {
+        Args: { p_since: string };
+        Returns: {
+          category_id: string;
+          first_published_at: string;
+          llm_calls: number;
+          llm_cost_usd: number;
+          llm_escalated_calls: number;
+          llm_failed_calls: number;
+          llm_unpriced_calls: number;
+        }[];
+      };
       reject_article: {
         Args: { p_article_id: string; p_expected_updated_at: string; p_reason?: string };
         Returns: undefined;
@@ -1454,6 +1504,7 @@ export type Database = {
           p_article_id: string;
           p_content: Json;
           p_expected_updated_at: string;
+          p_hero_image_id: string;
           p_lead: string;
           p_title: string;
         };

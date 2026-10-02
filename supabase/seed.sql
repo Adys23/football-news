@@ -407,3 +407,63 @@ insert into sources (name, url, rss_url, kind, type, trust_score, language, coun
     false
   )
 on conflict do nothing;
+
+-- === Obrazy ===
+-- Pliki testowe (jednolity kolor, bez osob) leza w supabase/seed-images/seed/ i trafiaja do
+-- bucketu article-images przez [storage.buckets.article-images] w config.toml. Rekordy daja
+-- redaktorowi co wybrac w panelu; licencje sa opisowe, bo to wlasne pliki testowe repozytorium.
+
+insert into image_assets (id, kind, storage_path, url, source, license, photographer, copyright, width, height, alt) values
+  (
+    '77777777-7777-4777-8777-777777777771',
+    'hero',
+    'seed/hero-zielony.jpg',
+    'http://127.0.0.1:54321/storage/v1/object/public/article-images/seed/hero-zielony.jpg',
+    'Obraz testowy football-news',
+    'CC BY 4.0',
+    'Redakcja football-news',
+    null,
+    1600,
+    900,
+    'Jednolite zielone tlo - obraz testowy'
+  ),
+  (
+    '77777777-7777-4777-8777-777777777772',
+    'hero',
+    'seed/hero-granatowy.jpg',
+    'http://127.0.0.1:54321/storage/v1/object/public/article-images/seed/hero-granatowy.jpg',
+    'Obraz testowy football-news',
+    'CC BY 4.0',
+    'Redakcja football-news',
+    null,
+    1600,
+    900,
+    'Jednolite granatowe tlo - obraz testowy'
+  ),
+  (
+    '77777777-7777-4777-8777-777777777773',
+    'hero',
+    'seed/hero-bordowy.jpg',
+    'http://127.0.0.1:54321/storage/v1/object/public/article-images/seed/hero-bordowy.jpg',
+    'Obraz testowy football-news',
+    'Materialy prasowe klubu',
+    null,
+    'Obraz testowy football-news',
+    1600,
+    900,
+    'Jednolite bordowe tlo - obraz testowy'
+  ),
+  (
+    '77777777-7777-4777-8777-777777777774',
+    'portrait',
+    'seed/portret-szary.jpg',
+    'http://127.0.0.1:54321/storage/v1/object/public/article-images/seed/portret-szary.jpg',
+    'Obraz testowy football-news',
+    'CC BY 4.0',
+    'Redakcja football-news',
+    null,
+    600,
+    800,
+    'Jednolite szare tlo w pionie - obraz testowy'
+  )
+on conflict (id) do nothing;

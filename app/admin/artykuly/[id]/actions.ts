@@ -4,14 +4,17 @@ import { refresh, revalidatePath } from "next/cache";
 import { articleContentSchema, type Json } from "@contracts/index.ts";
 import {
   ARTICLE_NOT_FOUND,
+  addedImageIds,
   editRuleIssues,
   parseArticleContentEdit,
   parseArticleMetaEdit,
+  parseHeroImageEdit,
   saveErrorMessage,
   scoresAreStale,
   type ArticleEditState,
 } from "@/lib/admin/article-edit";
 import { checkArticleEdit, getArticleForEdit } from "@/lib/admin/article-edit-data";
+import { getLibraryImage, getLibraryImageIds } from "@/lib/admin/image-library";
 import {
   decisionErrorMessage,
   parsePublishInput,
@@ -46,6 +49,7 @@ export async function saveArticleMeta(
     title,
     lead,
     content: article.content,
+    heroImageId: article.heroImageId,
   });
 }
 
@@ -70,7 +74,9 @@ export async function saveArticleContent(
   }
 
   const current = articleContentSchema.safeParse(article.content);
-  const ruleIssues = editRuleIssues(current.success ? current.data.blocks : [], content.blocks);
+  const before = current.success ? current.data.blocks : [];
+  const libraryImageIds = await getLibraryImageIds(addedImageIds(before, content.blocks));
+  const ruleIssues = editRuleIssues(before, content.blocks, libraryImageIds);
   if (ruleIssues.length > 0) {
     return { status: "error", message: "Zmiany łamią zasady edycji.", issues: ruleIssues };
   }
@@ -79,14 +85,58 @@ export async function saveArticleContent(
     title: article.title,
     lead: article.lead,
     content,
+    heroImageId: article.heroImageId,
   });
 }
+
+/**
+ * Obraz glowny zmienia sie ta sama funkcja co tekst (save_article_edit), z biezacym tytulem,
+ * leadem i trescia. Tekst sie nie zmienia, wiec kontrola redakcyjna tekstu jest pomijana.
+ */
+export async function saveArticleHero(
+  _prev: ArticleEditState | undefined,
+  formData: FormData,
+): Promise<ArticleEditState> {
+  await requireRole("editor");
+
+  const parsed = parseHeroImageEdit(formData);
+  if (!parsed.ok) {
+    return parsed.state;
+  }
+  const { articleId, expectedUpdatedAt, heroImageId } = parsed.data;
+
+  const article = await getArticleForEdit(articleId);
+  if (!article) {
+    return { status: "error", message: ARTICLE_NOT_FOUND };
+  }
+  if (article.lead === null) {
+    return { status: "error", message: "Uzupełnij lead, zanim zmienisz zdjęcie." };
+  }
+  if (heroImageId !== null) {
+    const image = await getLibraryImage(heroImageId);
+    if (!image || image.kind !== "hero") {
+      return {
+        status: "error",
+        message: "Zdjęcie główne musi pochodzić z biblioteki, mieć licencję i rodzaj „hero”.",
+      };
+    }
+  }
+
+  return persistArticleEdit(articleId, expectedUpdatedAt, {
+    title: article.title,
+    lead: article.lead,
+    content: article.content,
+    heroImageId,
+  });
+}
+
+type ArticleEdit = { title: string; lead: string; content: Json; heroImageId: string | null };
 
 async function saveArticleEdit(
   articleId: string,
   expectedUpdatedAt: string,
   storyId: string,
-  edit: { title: string; lead: string; content: Json },
+  edit: ArticleEdit,
 ): Promise<ArticleEditState> {
   const check = await checkArticleEdit(storyId, edit);
   if (!check.ok) {
@@ -100,6 +150,14 @@ async function saveArticleEdit(
     };
   }
 
+  return persistArticleEdit(articleId, expectedUpdatedAt, edit);
+}
+
+async function persistArticleEdit(
+  articleId: string,
+  expectedUpdatedAt: string,
+  edit: ArticleEdit,
+): Promise<ArticleEditState> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("save_article_edit", {
     p_article_id: articleId,
@@ -107,6 +165,8 @@ async function saveArticleEdit(
     p_title: edit.title,
     p_lead: edit.lead,
     p_content: edit.content,
+    // Generator typow nie oznacza argumentow funkcji jako nullable, a null to "bez obrazu" (0027).
+    p_hero_image_id: edit.heroImageId as string,
   });
 
   if (error) {

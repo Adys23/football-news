@@ -137,22 +137,24 @@ Jedno odstępstwo od "zawsze wszystko", świadome i warte odnotowania: `verify:d
 
 ### 3.4 Skrypty w `package.json`
 
-| Skrypt          | Zawartość                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| `typecheck`     | `tsc --noEmit`                                                                                 |
-| `lint`          | `eslint . --max-warnings=0`                                                                    |
-| `format:check`  | `prettier --check .`                                                                           |
-| `test`          | `vitest run`                                                                                   |
-| `test:db`       | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                             |
-| `test:pipeline` | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)            |
-| `test:e2e`      | seed opublikowanego artykułu (`scripts/e2e-seed.mjs`) i `playwright test` (sekcja 4.5)         |
-| `perf:budget`   | LCP i CLS na emulowanym telefonie (sekcja 4.7); poza `verify:all` i CI                         |
-| `deno:check`    | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime          |
-| `deno:lint`     | `deno lint` w `supabase/functions/`                                                            |
-| `env:local`     | generuje `.env.local` z danych działającego lokalnego stacku                                   |
-| `verify`        | `typecheck && lint && format:check && test && build`                                           |
-| `verify:db`     | `supabase db reset && db lint && test db && gen types && git diff --exit-code`                 |
-| `verify:all`    | `verify && deno:check && deno:lint && verify:db && test:pipeline && test:e2e` - to samo, co CI |
+| Skrypt            | Zawartość                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `typecheck`       | `tsc --noEmit`                                                                                 |
+| `lint`            | `eslint . --max-warnings=0`                                                                    |
+| `format:check`    | `prettier --check .`                                                                           |
+| `test`            | `vitest run`                                                                                   |
+| `test:db`         | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                             |
+| `test:pipeline`   | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)            |
+| `test:e2e`        | seed opublikowanego artykułu (`scripts/e2e-seed.mjs`) i `playwright test` (sekcja 4.5)         |
+| `perf:budget`     | LCP i CLS na emulowanym telefonie (sekcja 4.7); poza `verify:all` i CI                         |
+| `smoke:prod`      | smoke wdrożonej strony: robots, sitemapy, RSS, JSON-LD (`docs/deployment.md`)                  |
+| `deploy:supabase` | `db push` i `functions deploy` na projekt Supabase Cloud (`docs/deployment.md`)                |
+| `deno:check`      | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime          |
+| `deno:lint`       | `deno lint` w `supabase/functions/`                                                            |
+| `env:local`       | generuje `.env.local` z danych działającego lokalnego stacku                                   |
+| `verify`          | `typecheck && lint && format:check && test && build`                                           |
+| `verify:db`       | `supabase db reset && db lint && test db && gen types && git diff --exit-code`                 |
+| `verify:all`      | `verify && deno:check && deno:lint && verify:db && test:pipeline && test:e2e` - to samo, co CI |
 
 Zasada: **to, co robi CI, musi dać się uruchomić jedną komendą lokalnie** (`npm run verify:all`). Bez tego agent nie ma jak sprawdzić pracy przed pushem.
 
@@ -253,24 +255,58 @@ Skrypt nie dodaje zależności: steruje Chromium przez Chrome DevTools Protocol 
 
 ### 4.8 Checki wymagane na `main`
 
-Docelowo: `quality`, `unit`, `db`, `pipeline-smoke`, `build`, `e2e`, `security` oraz akceptacja review. Branch protection: brak bezpośrednich pushy, brak force push, wymagana aktualna gałąź, wymagane rozwiązanie wszystkich wątków w review.
+Stan na 2026-09-29: `main` nie ma klasycznej ochrony gałęzi (API zwraca `protected: false`). Rulesetów nie zweryfikowano - sprawdź je ręcznie w Settings -> Rules -> Rulesets, zanim uznasz ochronę za wdrożoną.
 
-Jako wymagane ustawiamy tylko te checki, które faktycznie istnieją - wymóg nieistniejącego checka blokuje każdy merge na zawsze. Aktualny stan jest w tabeli poniżej.
+Jako wymagane ustawiamy tylko te checki, które faktycznie istnieją - wymóg nieistniejącego checka blokuje każdy merge na zawsze. Nazwy poniżej to pola `name:` jobów z `.github/workflows/ci.yml`, bo pod tymi nazwami GitHub raportuje checki.
+
+Docelowa konfiguracja rulesetu dla `main` (Settings -> Rules -> Rulesets, cel: gałąź domyślna):
+
+- wymagany pull request przed scaleniem, bez bezpośrednich pushy,
+- wymagane checki (z opcją "Require branches to be up to date before merging"):
+  - `Typy, linter, formatowanie` (job `quality`),
+  - `Edge Functions (Deno)` (job `deno`),
+  - `Testy jednostkowe i pokrycie` (job `unit`),
+  - `Migracje, RLS i typy` (job `db`, razem ze smoke pipeline'u),
+  - `Build produkcyjny` (job `build`),
+  - `Zaleznosci i sekrety` (job `security`),
+- wymagane rozwiązanie wszystkich wątków w review,
+- blokada force push i usuwania gałęzi,
+- brak bypassu dla powyższych reguł,
+- tylko squash merge (Settings -> General -> Pull Requests: wyłączone merge commit i rebase).
+
+Na liście nie ma osobnych checków `pipeline-smoke` i `e2e`. Smoke pipeline'u (`npm run test:pipeline`) jest krokiem joba `db`, więc wymaga go check `Migracje, RLS i typy`. `e2e` dojdzie jako wymagany dopiero wtedy, gdy job powstanie w CI (etap 4) - wcześniej zablokowałby każdy merge.
+
+#### Decyzja właściciela: wymagane zatwierdzenie
+
+Wybrana opcja (b): wymagany 1 approval i review od Code Ownerów, z bypassem dla roli admin (właściciel, `@Adys23`). Jedynym code ownerem jest właściciel, a GitHub nie pozwala zatwierdzić własnego PR-a; bez wyjątku nie dałoby się scalić ani jego PR-ów, ani PR-ów agentów otwieranych jego tokenem, bo ich autorem też jest `@Adys23`. Bypass to świadomy wyjątek od zasady "brak bypassu" i dotyczy tylko wymogu zatwierdzenia: bramką merytoryczną pozostają wymagane checki CI i automatyczny przegląd na PR (sekcja 2.3), których admin nie omija. Kompromis polega na tym, że dla PR-ów właściciela zatwierdzenie jest formalnie wyłączone i jakość opiera się na CI oraz przeglądzie automatycznym, a nie na drugiej osobie.
+
+Żeby bypass nie obejmował checków, konfigurujemy dwa rulesety na `main`:
+
+1. **Bramki** - wszystkie reguły z listy wyżej (PR, checki, wątki, force push, usuwanie), bez listy bypassu.
+2. **Zatwierdzenie** - "Require a pull request before merging" z 1 wymaganym approvalem i "Require review from Code Owners"; na liście bypassu rola `Repository admin` w trybie "For pull requests only".
+
+Bypass w rulesecie zwalnia ze wszystkich reguł tego rulesetu, dlatego reguły bez wyjątku muszą być w osobnym rulesecie. Tryb "For pull requests only" nie pozwala adminowi pushować na `main` z pominięciem PR-a.
+
+Rozważone i odrzucone:
+
+- (a) 1 approval i review od Code Ownerów bez bypassu - blokuje każdy PR właściciela i agentów, dopóki nie pojawi się drugi recenzent z prawem zapisu.
+- (c) brak wymaganego approvalu, tylko checki - prostsze, ale `CODEOWNERS` staje się wtedy wyłącznie informacyjny, także dla PR-ów spoza zespołu.
 
 ### 4.9 Stan wdrożenia bramek
 
-| Bramka                                            | Stan      | Uwagi                                                                                    |
-| ------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
-| `quality` (typy, eslint, prettier)                | działa    |                                                                                          |
-| `unit` (vitest + progi pokrycia)                  | działa    | progi dla `_shared/lib/**` i `_shared/contracts/**`                                      |
-| `db` (migracje, `db lint`, pgTAP, zgodność typów) | działa    | 25 testów pgTAP: RLS, trigger publikacji, kolejka                                        |
-| `build` (`next build`)                            | działa    | bez dostępu do bazy i kluczy                                                             |
-| `security` (`npm audit`, skan sekretów)           | działa    |                                                                                          |
-| guard niezmienialności migracji                   | brak w CI | wymuszany przez hook `beforeShellExecution` i review; do CI wchodzi razem z pierwszym PR |
-| guard `prompt_version`                            | brak w CI | hook `afterFileEdit` przypomina; egzekucja od etapu 2                                    |
-| `pipeline-smoke`                                  | brak      | wchodzi z pierwszymi handlerami (etap 1)                                                 |
-| `e2e` (Playwright)                                | działa    | bez listy źródeł pod artykułem - dochodzi z PR 4.2a                                      |
-| `lighthouse`                                      | brak      | do tego czasu lokalnie `npm run perf:budget`                                             |
+| Bramka                                            | Stan                      | Uwagi                                                                                    |
+| ------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------- |
+| `quality` (typy, eslint, prettier)                | działa                    |                                                                                          |
+| `unit` (vitest + progi pokrycia)                  | działa                    | progi dla `_shared/lib/**` i `_shared/contracts/**`                                      |
+| `deno` (`deno check`, `deno lint`)                | działa                    | typy i linter Edge Functions w runtime Deno                                              |
+| `db` (migracje, `db lint`, pgTAP, zgodność typów) | działa                    | testy pgTAP w `supabase/tests`: RLS, trigger publikacji, kolejka, audyt, SEO             |
+| `build` (`next build`)                            | działa                    | bez dostępu do bazy i kluczy                                                             |
+| `security` (`npm audit`, skan sekretów)           | działa                    |                                                                                          |
+| guard niezmienialności migracji                   | brak w CI                 | wymuszany przez hook `beforeShellExecution` i review; do CI wchodzi razem z pierwszym PR |
+| guard `prompt_version`                            | brak w CI                 | hook `afterFileEdit` przypomina; egzekucja od etapu 2                                    |
+| `pipeline-smoke`                                  | działa, krok w jobie `db` | `npm run test:pipeline` na fixtures LLM (`LLM_ENABLED=false`); bez osobnego checka       |
+| `e2e` (Playwright)                                | działa                    | bez listy źródeł pod artykułem - dochodzi z PR 4.2a                                      |
+| `lighthouse`                                      | brak                      | do tego czasu lokalnie `npm run perf:budget`                                             |
 
 Zakazane wzorce (`@ts-ignore`, `any`, `console.log`, `as unknown as`) są egzekwowane przez ESLint, więc blokuje je job `quality` i hook `pre-commit`, a nie osobny skrypt.
 

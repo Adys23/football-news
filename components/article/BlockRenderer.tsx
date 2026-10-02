@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
-import type { ArticleBlock } from "@contracts/index.ts";
+import type { ArticleBlock, LicensedImage } from "@contracts/index.ts";
+import { ArticleImage } from "@/components/article/ArticleImage";
+
+const NO_IMAGES: ReadonlyMap<string, LicensedImage> = new Map();
 
 /**
- * "review" (panel) pokazuje wszystko, takze braki: fakt bez tresci i miejsce na zdjecie.
+ * "review" (panel) pokazuje wszystko, takze braki: fakt bez tresci i zdjecie spoza biblioteki.
  * "public" pomija to, czego czytelnik nie powinien ogladac jako usterki.
  */
 export type BlockRendererVariant = "review" | "public";
@@ -14,12 +17,15 @@ export type BlockRendererVariant = "review" | "public";
 export function BlockRenderer({
   blocks,
   factStatements,
+  images = NO_IMAGES,
   renderAfter,
   variant = "review",
 }: {
   blocks: readonly ArticleBlock[];
   /** id faktu -> zdanie, dla blokow fact_box. */
   factStatements: ReadonlyMap<string, string>;
+  /** id obrazu -> obraz z licencja, dla blokow image. Brak w mapie: obraz spoza zasad. */
+  images?: ReadonlyMap<string, LicensedImage>;
   /** Dodatek pod blokiem, np. uwagi QA w panelu. */
   renderAfter?: (index: number) => ReactNode;
   variant?: BlockRendererVariant;
@@ -28,7 +34,7 @@ export function BlockRenderer({
     <div className="space-y-4">
       {blocks.map((block, index) => (
         <div key={index} className="empty:hidden">
-          <Block block={block} factStatements={factStatements} variant={variant} />
+          <Block block={block} factStatements={factStatements} images={images} variant={variant} />
           {renderAfter?.(index)}
         </div>
       ))}
@@ -39,10 +45,12 @@ export function BlockRenderer({
 function Block({
   block,
   factStatements,
+  images,
   variant,
 }: {
   block: ArticleBlock;
   factStatements: ReadonlyMap<string, string>;
+  images: ReadonlyMap<string, LicensedImage>;
   variant: BlockRendererVariant;
 }) {
   switch (block.type) {
@@ -65,17 +73,21 @@ function Block({
           ) : null}
         </blockquote>
       );
-    case "image":
-      // Obrazy z image_assets wejda w etapie 4; do tego czasu tylko miejsce i podpis.
+    case "image": {
+      const image = images.get(block.imageId);
+      if (image) {
+        return <ArticleImage image={image} caption={block.caption} />;
+      }
       if (variant === "public") {
         return null;
       }
       return (
-        <figure className="rounded-md border border-dashed border-neutral-300 p-4 text-sm text-neutral-600">
-          <p>Zdjęcie ({block.imageId})</p>
+        <figure className="rounded-md border border-dashed border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <p>Brak obrazu w bibliotece ({block.imageId}). Czytelnik go nie zobaczy.</p>
           {block.caption ? <figcaption className="mt-1">{block.caption}</figcaption> : null}
         </figure>
       );
+    }
     case "list": {
       const items = block.items.map((item, index) => <li key={index}>{item}</li>);
       return block.style === "number" ? (

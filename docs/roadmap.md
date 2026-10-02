@@ -89,6 +89,7 @@ Zakres:
 
 - publiczne trasy: strona główna, kategorie, artykuł, profile zawodników i klubów, strony autorów,
 - `BlockRenderer`, lista źródeł pod artykułem, informacja o roli AI i akceptacji redaktora,
+- obrazy w artykułach: redaktor wybiera obraz główny i zdjęcia w treści spośród istniejących rekordów `image_assets` z licencją (nie AI), strona publiczna renderuje je z atrybucją; wgrywanie i zarządzanie biblioteką to V2,
 - metadane, `canonical`, Open Graph, `max-image-preview:large`,
 - JSON-LD `NewsArticle` i `BreadcrumbList`,
 - `sitemap.xml`, `sitemap-news.xml` (48 godzin), `robots.txt`, feed RSS,
@@ -132,7 +133,7 @@ Funkcje MVP:
 - `UPDATE_ARTICLE`: timeline aktualizacji w istniejącym artykule zamiast nowego tekstu,
 - baza transferowa z publicznym UI (`transfers`),
 - pełne profile zawodników i klubów z automatycznym linkowaniem wewnętrznym,
-- biblioteka zdjęć z licencjami i przypisywaniem obrazu do artykułu,
+- biblioteka zdjęć w panelu: wgrywanie do Storage, opis licencji, wyszukiwanie i zarządzanie rekordami `image_assets` (przypisywanie istniejących obrazów do artykułu jest w MVP, etap 4),
 - wyszukiwarka na stronie,
 - raport kosztów i jakości w panelu.
 

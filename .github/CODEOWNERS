@@ -1,27 +1,24 @@
 # Właściciele obszarów wymagających świadomej zgody.
-#
-# UWAGA: przed użyciem zamień @OWNER na swój login GitHub.
-# Plik z nieistniejącym loginem nie działa, a GitHub nie zgłasza tego jako błędu.
 
 # Wszystko domyślnie
-*                                   @OWNER
+*                                   @Adys23
 
 # Schemat bazy: migracji nie zmieniamy po fakcie
-/supabase/migrations/               @OWNER
+/supabase/migrations/               @Adys23
 
 # Polityki dostępu i zasady publikacji
-/supabase/migrations/0014_rls_policies.sql  @OWNER
+/supabase/migrations/0014_rls_policies.sql  @Adys23
 
 # Prompty i zasady redakcyjne - zmiana wpływa na każdy przyszły tekst
-/supabase/functions/_shared/prompts/        @OWNER
+/supabase/functions/_shared/prompts/        @Adys23
 
 # Bramki jakości i automatyzacja
-/.github/                           @OWNER
-/.husky/                            @OWNER
-/.cursor/                           @OWNER
-/.claude/                           @OWNER
-/scripts/                           @OWNER
+/.github/                           @Adys23
+/.husky/                            @Adys23
+/.cursor/                           @Adys23
+/.claude/                           @Adys23
+/scripts/                           @Adys23
 
 # Dokumentacja architektury jest źródłem prawdy dla agentów
-/docs/                              @OWNER
-/AGENTS.md                          @OWNER
+/docs/                              @Adys23
+/AGENTS.md                          @Adys23

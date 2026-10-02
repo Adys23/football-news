@@ -143,11 +143,11 @@ Ostatnia sekcja jest obowiązkowa i celowo niewygodna - wymusza jawne przyznanie
 Wymuszony przegląd właściciela projektu dla trzech najbardziej ryzykownych ścieżek:
 
 ```
-/supabase/migrations/                    @wlasciciel
-/supabase/functions/_shared/prompts/     @wlasciciel
-/docs/                                   @wlasciciel
-/AGENTS.md                               @wlasciciel
-/.cursor/                                @wlasciciel
+/supabase/migrations/                    @Adys23
+/supabase/functions/_shared/prompts/     @Adys23
+/docs/                                   @Adys23
+/AGENTS.md                               @Adys23
+/.cursor/                                @Adys23
 ```
 
 ### 5.3 Pozostałe

@@ -13,6 +13,7 @@ Dokumentacja źródłowa - w razie sprzeczności wygrywa dokumentacja, nie imple
 - [docs/ai-pipeline.md](docs/ai-pipeline.md) - etapy AI, prompty, kontrakty JSON, routing modeli
 - [docs/agent-tooling.md](docs/agent-tooling.md) - hooki, reguły, skille projektowe, lokalny CLI
 - [docs/runbook.md](docs/runbook.md) - procedury awaryjne; zajrzyj tu, zanim zaczniesz diagnozować na czuja
+- [docs/deployment.md](docs/deployment.md) - wdrożenie na Vercel i Supabase Cloud, zmienne, wycofanie wersji
 - [docs/roadmap.md](docs/roadmap.md) - co jest w MVP, a co świadomie poza nim
 
 ---
