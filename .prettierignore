@@ -7,6 +7,7 @@ package-lock.json
 public
 supabase/.temp
 supabase/.branches
+.claude/worktrees
 next-env.d.ts
 *.sql
 
