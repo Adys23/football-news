@@ -54,7 +54,8 @@ select lives_ok(
        '2026-01-01 10:00:00+00',
        'Tytul bez zmian',
        'Lead bez zmian.',
-       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit redaktora."}]}'
+       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit redaktora."}]}',
+       null
      ) $$,
   'redaktor zapisuje zmiane samej tresci'
 );
@@ -66,7 +67,8 @@ select lives_ok(
        '2026-01-01 10:00:00+00',
        'Bruno Fernandes przedluzyl kontrakt do 2028 roku',
        'Lead od modelu.',
-       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+       null
      ) $$,
   'redaktor zapisuje zmiane tytulu'
 );
@@ -79,7 +81,8 @@ select lives_ok(
          %L,
          'Bruno Fernandes przedluzyl kontrakt do 2028 roku',
          'Lead redaktora.',
-         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+         null
        ) $$,
     (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01')
   ),
@@ -169,7 +172,8 @@ select lives_ok(
          %L,
          'Bruno Fernandes zostaje w Manchesterze do 2028 roku',
          'Lead redaktora.',
-         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+         null
        ) $$,
     (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01')
   ),
@@ -206,7 +210,8 @@ select lives_ok(
          %L,
          'Bruno Fernandes zostaje w Manchesterze United do 2028 roku',
          'Lead redaktora.',
-         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+         null
        ) $$,
     (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01')
   ),
@@ -245,7 +250,8 @@ select lives_ok(
          %L,
          'Bruno Fernandes zostaje w Manchesterze United do 2029 roku',
          'Lead redaktora.',
-         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+         '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+         null
        ) $$,
     (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbd01')
   ),

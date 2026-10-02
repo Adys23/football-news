@@ -11,13 +11,14 @@ export interface ArticleForEdit {
   title: string;
   lead: string | null;
   content: Json;
+  heroImageId: string | null;
 }
 
 export async function getArticleForEdit(id: string): Promise<ArticleForEdit | null> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("articles")
-    .select("story_id, title, lead, content")
+    .select("story_id, title, lead, content, hero_image_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -25,7 +26,13 @@ export async function getArticleForEdit(id: string): Promise<ArticleForEdit | nu
     throw new Error(`Nie udalo sie odczytac artykulu do edycji: ${error.message}`);
   }
   return data
-    ? { storyId: data.story_id, title: data.title, lead: data.lead, content: data.content }
+    ? {
+        storyId: data.story_id,
+        title: data.title,
+        lead: data.lead,
+        content: data.content,
+        heroImageId: data.hero_image_id,
+      }
     : null;
 }
 

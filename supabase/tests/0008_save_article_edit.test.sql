@@ -63,7 +63,8 @@ select is(
     '2026-01-01 10:00:00+00',
     'Tytul od modelu do poprawy',
     'Lead od modelu.',
-    '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}'
+    '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit modelu."}]}',
+    null
   ),
   '2026-01-01 10:00:00+00'::timestamptz,
   'zapis bez zmian zwraca dotychczasowy updated_at'
@@ -76,7 +77,8 @@ select lives_ok(
        '2026-01-01 10:00:00+00',
        'Tytul poprawiony przez redaktora',
        'Lead redaktora.',
-       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit redaktora."}]}'
+       '{"version": 1, "blocks": [{"type": "paragraph", "text": "Akapit redaktora."}]}',
+       null
      ) $$,
   'editor zapisuje edycje artykulu w review'
 );
@@ -88,7 +90,8 @@ select throws_ok(
        '2026-01-01 10:00:00+00',
        'Tytul z nieaktualnej karty',
        null,
-       '{"version": 1, "blocks": []}'
+       '{"version": 1, "blocks": []}',
+       null
      ) $$,
   '40001',
   null,
@@ -103,7 +106,8 @@ select throws_ok(
          %L,
          repeat('x', 91),
          null,
-         '{"version": 1, "blocks": []}'
+         '{"version": 1, "blocks": []}',
+         null
        ) $$,
     (select updated_at from articles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb81')
   ),
@@ -119,7 +123,8 @@ select throws_ok(
        '2026-01-01 10:00:00+00',
        'Edycja draftu',
        null,
-       '{"version": 1, "blocks": []}'
+       '{"version": 1, "blocks": []}',
+       null
      ) $$,
   '55000',
   null,
@@ -133,7 +138,8 @@ select throws_ok(
        '2026-01-01 10:00:00+00',
        'Edycja opublikowanego',
        null,
-       '{"version": 1, "blocks": []}'
+       '{"version": 1, "blocks": []}',
+       null
      ) $$,
   '55000',
   null,
@@ -147,7 +153,8 @@ select throws_ok(
        '2026-01-01 10:00:00+00',
        'Edycja nieistniejacego',
        null,
-       '{"version": 1, "blocks": []}'
+       '{"version": 1, "blocks": []}',
+       null
      ) $$,
   'P0002',
   null,
@@ -221,7 +228,8 @@ select throws_ok(
        now(),
        'Edycja czytelnika',
        null,
-       '{"version": 1, "blocks": []}'
+       '{"version": 1, "blocks": []}',
+       null
      ) $$,
   '42501',
   null,
@@ -237,12 +245,12 @@ select is(
 );
 
 select ok(
-  not has_function_privilege('anon', 'save_article_edit(uuid, timestamptz, text, text, jsonb)', 'execute'),
+  not has_function_privilege('anon', 'save_article_edit(uuid, timestamptz, text, text, jsonb, uuid)', 'execute'),
   'anon nie ma execute na save_article_edit'
 );
 
 select ok(
-  has_function_privilege('authenticated', 'save_article_edit(uuid, timestamptz, text, text, jsonb)', 'execute'),
+  has_function_privilege('authenticated', 'save_article_edit(uuid, timestamptz, text, text, jsonb, uuid)', 'execute'),
   'authenticated ma execute na save_article_edit'
 );
 
