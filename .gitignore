@@ -46,3 +46,6 @@ next-env.d.ts
 # supabase
 supabase/.temp/
 supabase/.branches/
+
+# worktree agentow (osobne checkouty)
+.claude/worktrees/

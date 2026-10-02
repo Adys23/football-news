@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "next-env.d.ts",
     "supabase/.temp/**",
+    // Worktree agentow to osobne checkouty; kazdy lintuje sie u siebie.
+    ".claude/worktrees/**",
     // Kod Deno (entrypointy Edge Functions) sprawdzamy deno lint, nie ESLintem.
     "supabase/functions/*/index.ts",
     "supabase/functions/_shared/llm/fixtures/**",
