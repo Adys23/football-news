@@ -188,6 +188,12 @@ Widok zdrowia źródeł (`app/admin/zrodla/page.tsx`, te same pliki `lib/admin/o
 - ostatni błąd pobierania (najnowszy `jobs.error` dla `FETCH_SOURCE` danego źródła) tylko dla admina, bo `jobs` jest w RLS tylko dla admina,
 - przełącznik `active` tylko dla admina: server action z `requireRole('admin')` i zodem, `update sources` na sesji (`sources_admin_write`) z warunkiem na poprzedni stan, więc nieaktualny formularz nic nie zmienia. Włączenie zeruje w tym samym zapisie `consecutive_failures`, a trigger `sources_audit_change` zapisuje jedną zmianę `source_change`.
 
+Raport jakości (`app/admin/jakosc/page.tsx`, dane w `lib/admin/quality-data.ts`, logika w `lib/admin/quality.ts`) czyta każdy redaktor, na sesji, bez `service_role`:
+
+- okno 7 / 30 / 60 dni z parametru `?okno=` (zod, domyślnie 30); artykuły przez RPC `quality_report_articles` z 60 dni (stronami po 1000 wierszy, bo tyle wynosi `max_rows`), koszt przez `quality_report_category_totals` z wybranego okna. Obie funkcje z migracji `0028` są `security definer` i dają redaktorowi tylko powody odrzuceń i agregaty kosztu, bez dostępu do `audit_log` i `llm_calls`. Wiersze RPC waliduje zod, bo wygenerowany typ nie pokazuje pól nullable,
+- per kategoria: czekające na decyzję, opublikowane i odrzucone w oknie, klasyfikacja edycji redaktora (bez edycji / tylko tytuł lub lead / treść), udział bez edycji jako dolna granica „bez poprawek merytorycznych”, średnie ocen i rozrzut jakości, koszt, koszt na opublikowany, wywołania bez ceny, nieudane i eskalowane (model równy `settings.model_escalation`),
+- postęp względem kryteriów automatycznej publikacji z `docs/roadmap.md` (`AUTO_PUBLISH_CRITERIA`, stałe tylko do wyświetlania): 60 dni od pierwszej publikacji, ponad 95% bez edycji zawsze na oknie 60 dni („spełnione” albo „nie wykazane”), sygnały halucynacji z 30 dni (odrzucenia, blokady `unsupported_claims`) jako „nie mierzone wprost”. Raport nie ma żadnych akcji i nie przełącza `auto_publish_enabled`.
+
 ### 3.8 Delivery / SEO
 
 Renderowanie strony publicznej z ISR, generowanie sitemap, JSON-LD, feedów RSS i unieważnianie cache po publikacji. Wymagania szczegółowe w sekcji 8.
