@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { ArticleImage } from "@/components/article/ArticleImage";
 import { BlockRenderer } from "@/components/article/BlockRenderer";
 import { AiDisclosure } from "@/components/public/AiDisclosure";
 import { ArticleUpdates } from "@/components/public/ArticleUpdates";
 import { siteUrl } from "@/lib/env";
 import { formatPublicDateTime } from "@/lib/public/format";
 import { articlePath } from "@/lib/public/paths";
-import { getPublishedArticle } from "@/lib/public/queries";
+import { getArticleBlockImages, getPublishedArticle } from "@/lib/public/queries";
 import { getArticleRedirectPath } from "@/lib/public/redirects";
 import { buildArticleMetadata } from "@/lib/seo/metadata";
 import {
@@ -69,6 +70,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     permanentRedirect(canonicalPath);
   }
 
+  const images = await getArticleBlockImages(article);
   const baseUrl = siteUrl();
   const structuredData = [
     buildNewsArticleJsonLd(article, baseUrl),
@@ -108,10 +110,21 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </p>
       </header>
 
+      {article.heroImage ? (
+        <div className="mt-8">
+          <ArticleImage image={article.heroImage} preload />
+        </div>
+      ) : null}
+
       <ArticleUpdates updates={article.updates} />
 
       <div className="mt-8 text-lg break-words">
-        <BlockRenderer blocks={article.blocks} factStatements={NO_FACTS} variant="public" />
+        <BlockRenderer
+          blocks={article.blocks}
+          factStatements={NO_FACTS}
+          images={images}
+          variant="public"
+        />
       </div>
 
       <AiDisclosure aiGenerated={article.aiGenerated} />

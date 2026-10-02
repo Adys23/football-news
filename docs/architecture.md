@@ -160,7 +160,8 @@ Widok recenzji (`app/admin/artykuly/[id]/page.tsx`, dane w `lib/admin/review-dat
 
 Edycja tytułu i leadu (`components/admin/ArticleMetaForm.tsx`, server action `saveArticleMeta`) oraz treści (`components/admin/BlockEditor.tsx`, server action `saveArticleContent`, obie w `app/admin/artykuly/[id]/actions.ts`) jest dostępna tylko dla artykułów `review`:
 
-- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty i listy; w ramce z faktami zmienia tylko tytuł. Zdjęcie można tylko zachować albo usunąć, a nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów (`editRuleIssues`), bo kontrola kopiowania pomija cytaty,
+- edytor bloków zmienia, dodaje, usuwa i przesuwa akapity, śródtytuły, cytaty, listy i zdjęcia; w ramce z faktami zmienia tylko tytuł. Nowy lub zmieniony blok `image` wskazuje obraz wybrany z biblioteki (`lib/admin/image-library.ts`: `image_assets` z licencją, nie AI, w kontrakcie `licensedImage`); `editRuleIssues` odrzuca `imageId` spoza niej, a trigger `articles_enforce_images` (0027) robi to samo w bazie. Nowy lub zmieniony cytat musi mieć autora i najwyżej `MAX_QUOTE_WORDS` słów, bo kontrola kopiowania pomija cytaty,
+- zdjęcie główne wybiera `components/admin/HeroImageForm.tsx` (server action `saveArticleHero`) spośród obrazów `kind = 'hero'` z biblioteki albo „Bez zdjęcia”. Zapis idzie przez `save_article_edit` z bieżącym tytułem, leadem i treścią, bez kontroli tekstu, bo tekst się nie zmienia. Wgrywania ani generowania obrazów w panelu nie ma (V2, `docs/roadmap.md`),
 - treść waliduje `articleContentSchema` z komunikatami po polsku: w edytorze informacyjnie, w server action jako warunek zapisu,
 
 - przed zapisem idą te same kontrole deterministyczne, co w `CHECK_ARTICLE` (`articleCheckIssues`), na tych samych danych: zatwierdzone fakty z `loadApprovedFacts`, teksty materiałów i encje z `loadArticleContext`. Loadery pipeline'u działają tu na sesji redaktora, więc obowiązuje RLS. Każde trafienie blokuje zapis,
@@ -371,6 +372,8 @@ Strategia renderowania:
 - Dane strukturalne `NewsArticle` z `headline`, `image`, `datePublished`, `dateModified`, `author` (prawdziwa osoba z redakcji, ze stroną autora), `publisher`. Do tego `BreadcrumbList`. Traktujemy to jako higienę, nie jako sposób na wejście do Discover - Google wprost mówi, że specjalne dane strukturalne nie są do Discover wymagane.
 - `max-image-preview:large` w `robots` meta.
 - Obraz główny minimum 1200 px szerokości, proporcje 16:9, z wypełnionym `alt`. Wymuszone ograniczeniem `CHECK (width >= 1200)` w `image_assets`.
+- Strona artykułu renderuje obraz główny pod nagłówkiem i obrazy bloków `image` przez `components/article/ArticleImage.tsx` (`next/image` z wymiarami z bazy, `<figcaption>` z podpisem i atrybucją licencji z `imageAttribution`). Obraz główny ma `preload` (Next 16 zastąpił tym `priority`), obrazy bloków ładują się leniwie. Obrazy bloków pobiera `getArticleBlockImages` jednym zapytaniem z tagami artykułu; obraz bez licencji, AI albo usunięty jest pomijany.
+- `next.config.ts` ustawia `images.qualities: [75]` (wymagane od Next 16) i `images.remotePatterns` tylko dla `/storage/v1/object/public/article-images/**` projektu z `NEXT_PUBLIC_SUPABASE_URL` (`lib/image-delivery.ts`). `dangerouslyAllowLocalIP` zostaje wyłączone: obraz z adresu lokalnego (lokalny Supabase `127.0.0.1:54321`) albo spoza bucketu idzie z `unoptimized` (`shouldOptimizeImage`), a produkcja optymalizuje normalnie.
 - Widoczna lista źródeł z linkami oraz informacja o roli AI i o tym, że tekst sprawdził redaktor. To jednocześnie uczciwość wobec czytelnika i sygnał E-E-A-T.
 
 ### 8.2 Na poziomie serwisu

@@ -6,9 +6,11 @@ import {
   DRAFT_WORDS,
   measureDraft,
   type ArticleBlock,
+  type LicensedImage,
 } from "@contracts/index.ts";
 import { saveArticleContent } from "@/app/admin/artykuly/[id]/actions";
 import { EditResult } from "@/components/admin/ArticleMetaForm";
+import { ImageThumbnail } from "@/components/admin/HeroImageForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,7 +57,7 @@ function normalize(block: ArticleBlock): ArticleBlock {
     case "fact_box":
       return { ...block, title: block.title?.trim() || undefined };
     case "image":
-      return block;
+      return { ...block, caption: block.caption?.trim() || undefined };
   }
 }
 
@@ -64,17 +66,21 @@ export function BlockEditor({
   updatedAt,
   blocks: initialBlocks,
   factStatements,
+  library,
 }: {
   articleId: string;
   updatedAt: string;
   blocks: ArticleBlock[];
   factStatements: Record<string, string>;
+  /** Obrazy z licencja, nie AI; nowy blok image wybiera tylko z tej listy. */
+  library: LicensedImage[];
 }) {
   const [state, action, pending] = useActionState(saveArticleContent, undefined);
   const [blocks, setBlocks] = useState<EditableBlock[]>(() =>
     initialBlocks.map((block, key) => ({ key, block })),
   );
   const nextKey = useRef(initialBlocks.length);
+  const firstImage = library[0];
 
   const content = { version: 1, blocks: blocks.map(({ block }) => normalize(block)) };
   const validation = validateArticleContent(content);
@@ -136,6 +142,7 @@ export function BlockEditor({
               block={block}
               label={`Blok ${index + 1}`}
               factStatements={factStatements}
+              library={library}
               onChange={(next) => update(key, next)}
             />
           </li>
@@ -154,6 +161,16 @@ export function BlockEditor({
             + {BLOCK_LABELS[block.type]}
           </Button>
         ))}
+        {firstImage ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => add({ type: "image", imageId: firstImage.id })}
+          >
+            + {BLOCK_LABELS.image}
+          </Button>
+        ) : null}
       </div>
 
       <p className="text-xs text-neutral-500">
@@ -196,11 +213,13 @@ function BlockFields({
   block,
   label,
   factStatements,
+  library,
   onChange,
 }: {
   block: ArticleBlock;
   label: string;
   factStatements: Record<string, string>;
+  library: LicensedImage[];
   onChange: (block: ArticleBlock) => void;
 }) {
   switch (block.type) {
@@ -292,12 +311,43 @@ function BlockFields({
           </ul>
         </div>
       );
-    case "image":
+    case "image": {
+      const image = library.find((item) => item.id === block.imageId);
       return (
-        <p className="text-sm text-neutral-600">
-          Zdjęcie {block.imageId}
-          {block.caption ? ` · ${block.caption}` : ""}. Zdjęcie można tylko zachować albo usunąć.
-        </p>
+        <div className="grid gap-2">
+          {image ? (
+            <ImageThumbnail image={image} />
+          ) : (
+            <p className="text-sm text-red-700">
+              Zdjęcia {block.imageId} nie ma w bibliotece. Wybierz inne albo usuń blok.
+            </p>
+          )}
+          <Field label="Zdjęcie z biblioteki">
+            <select
+              value={image ? block.imageId : ""}
+              onChange={(event) => onChange({ ...block, imageId: event.target.value })}
+              className={FIELD_CLASS}
+            >
+              {image ? null : (
+                <option value="" disabled>
+                  Wybierz zdjęcie
+                </option>
+              )}
+              {library.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.alt} ({item.attribution})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Podpis (opcjonalny)">
+            <Input
+              value={block.caption ?? ""}
+              onChange={(event) => onChange({ ...block, caption: event.target.value })}
+            />
+          </Field>
+        </div>
       );
+    }
   }
 }
