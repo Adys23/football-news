@@ -176,3 +176,25 @@ Kiedy: źródło wyłączyło się po błędach (sekcja 3) albo trzeba je wyłą
 1. Supabase Studio (`npm run db:studio` lokalnie) → Authentication → Add user, z potwierdzonym e-mailem.
 2. W SQL editorze dopisz profil: `insert into profiles (id, email, display_name, role) values ('<id z auth.users>', '<e-mail>', '<imię>', 'editor');`. Rola `admin` tylko dla osób, które mają ponawiać joby i przełączać źródła.
 3. Bez wiersza w `profiles` konto nie wejdzie do panelu. Konto odbiera się przez `profiles.active = false`, nie przez usunięcie użytkownika, żeby wpisy w `audit_log` zachowały autora.
+
+---
+
+## 15. Harmonogramy (cron) na produkcji
+
+Dotyczy pierwszego uruchomienia crona oraz sytuacji, w której materiały z RSS przestają przychodzić, a kolejka stoi. Pełną procedurę wdrożenia opisuje [deployment.md](deployment.md).
+
+1. Harmonogramy `fetch-sources` i `process-jobs` wołają `invoke_edge_function()`, która czyta adres funkcji i klucz z Vault w chwili wywołania (migracja 0029). Po migracjach wszystkie harmonogramy są **nieaktywne**.
+2. Ustaw sekrety w Vault (SQL editor, rola `postgres`). Klucz musi być tym samym kluczem `service_role`, który funkcje dostają jako `SUPABASE_SERVICE_ROLE_KEY`:
+   - nowe: `select vault.create_secret('https://<ref>.supabase.co/functions/v1', 'cron_functions_url');` i `select vault.create_secret('<klucz service_role>', 'cron_service_role_key');`,
+   - zmiana (np. rotacja klucza): `select vault.update_secret((select id from vault.secrets where name = 'cron_service_role_key'), '<nowy klucz>');`.
+3. Sprawdź wywołanie ręcznie, zanim włączysz harmonogramy: `select public.invoke_edge_function('process-jobs', 60000);`. `null` oznacza brak `pg_net` albo sekretów (`select name from vault.secrets where name like 'cron_%';`). Po kilku sekundach sprawdź `select status_code, content, error_msg from net._http_response order by created desc limit 3;`. `401` to klucz inny niż `SUPABASE_SERVICE_ROLE_KEY` funkcji, `404` to zły `cron_functions_url` albo niewdrożona funkcja, a `error_msg` z timeoutem oznacza zły host.
+4. Włącz harmonogramy: `select cron.alter_job(jobid, active := true) from cron.job where jobname in ('fetch-sources', 'process-jobs', 'requeue-stale-jobs', 'purge-raw-data', 'purge-done-jobs');`. Nie używaj `update cron.job`, bo kończy się `permission denied`.
+5. Po kilku minutach sprawdź przebiegi: `select j.jobname, d.status, d.return_message, d.start_time from cron.job_run_details d join cron.job j using (jobid) order by d.start_time desc limit 10;`. Status `succeeded` oznacza tylko zakolejkowanie żądania, a wynik HTTP jest w `net._http_response` (krok 3).
+6. Zatrzymanie: to samo co w kroku 4 z `active := false`. Kolejka w `jobs` zostaje nietknięta. Do zatrzymania samej publikacji wystarczy `settings.pipeline_enabled = false`.
+7. Lokalnie harmonogramy też są nieaktywne. Do testu użyj `cron_functions_url = 'http://kong:8000/functions/v1'` i lokalnego klucza z `npx supabase status`, a po teście wyłącz harmonogram i usuń sekrety (`delete from vault.secrets where name like 'cron_%';`).
+
+---
+
+## 16. Wdrożenie i wycofanie wersji
+
+Procedura pierwszego wdrożenia, kolejność wdrażania migracji i kodu, wycofanie wersji na Vercelu i w Supabase oraz kryteria gotowości etapu 4: [deployment.md](deployment.md). Po każdym wdrożeniu uruchom `npm run smoke:prod -- --base-url=https://<domena>`.
