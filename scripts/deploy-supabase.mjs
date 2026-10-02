@@ -18,7 +18,6 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { delimiter } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
@@ -31,7 +30,12 @@ import {
 import { fail, step } from "./lib/run.mjs";
 
 // CLI przypiete w package.json, jak w pozostalych skryptach (AGENTS.md §2).
-const LOCAL_BIN = fileURLToPath(new URL("../node_modules/.bin", import.meta.url));
+// Launcher JS z pakietu, a nie shim z node_modules/.bin: na Windows shim to
+// supabase.cmd, ktorego spawnSync bez powloki nie uruchomi, wiec wygrywal
+// globalny supabase.exe w innej wersji.
+const SUPABASE_CLI = fileURLToPath(
+  new URL("../node_modules/supabase/dist/supabase.js", import.meta.url),
+);
 
 const { values } = parseArgs({
   options: {
@@ -93,10 +97,7 @@ if (missing.length > 0) {
 // Bez powloki: argumenty ida do procesu wprost, wiec sciezka pliku sekretow
 // nie jest interpretowana przez shell.
 function supabase(args) {
-  const result = spawnSync("supabase", args, {
-    stdio: "inherit",
-    env: { ...process.env, PATH: `${LOCAL_BIN}${delimiter}${process.env.PATH ?? ""}` },
-  });
+  const result = spawnSync(process.execPath, [SUPABASE_CLI, ...args], { stdio: "inherit" });
   return result.error ? 1 : (result.status ?? 1);
 }
 
