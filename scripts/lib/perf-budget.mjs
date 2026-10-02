@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 
 /** Budzety z docs/architecture.md §8.2 i docs/roadmap.md (etap 4). */
 export const PERF_BUDGETS = Object.freeze({ lcpMs: 2000, cls: 0.1 });
@@ -132,7 +132,8 @@ export function resolveChromePath(env, { exists = existsSync, list = readdirSync
 
     for (const candidate of candidates) {
       for (const binary of ["chrome-linux/chrome", "chrome-linux64/chrome"]) {
-        const path = join(root, candidate.name, binary);
+        // Uklad katalogow Playwrighta na Linuksie; join z Windows dalby ukosniki wsteczne.
+        const path = posix.join(root, candidate.name, binary);
         if (exists(path)) {
           return path;
         }
