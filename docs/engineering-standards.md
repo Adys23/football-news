@@ -132,27 +132,29 @@ Jedno odstępstwo od "zawsze wszystko", świadome i warte odnotowania: `verify:d
 3. npm run verify:db      -> bezwarunkowo: db reset + db lint + zgodnosc typow
 4. npm run test:pipeline  -> smoke pipeline'u na fixtures (LLM_ENABLED=false)
 5. skan sekretow na zakresie pushowanych commitow
+6. npm run test:e2e       -> smoke Playwright na zbudowanej aplikacji
 ```
 
 ### 3.4 Skrypty w `package.json`
 
-| Skrypt            | Zawartość                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `typecheck`       | `tsc --noEmit`                                                                        |
-| `lint`            | `eslint . --max-warnings=0`                                                           |
-| `format:check`    | `prettier --check .`                                                                  |
-| `test`            | `vitest run`                                                                          |
-| `test:db`         | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                    |
-| `test:pipeline`   | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)   |
-| `perf:budget`     | LCP i CLS na emulowanym telefonie (sekcja 4.7); poza `verify:all` i CI                |
-| `smoke:prod`      | smoke wdrożonej strony: robots, sitemapy, RSS, JSON-LD (`docs/deployment.md`)         |
-| `deploy:supabase` | `db push` i `functions deploy` na projekt Supabase Cloud (`docs/deployment.md`)       |
-| `deno:check`      | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime |
-| `deno:lint`       | `deno lint` w `supabase/functions/`                                                   |
-| `env:local`       | generuje `.env.local` z danych działającego lokalnego stacku                          |
-| `verify`          | `typecheck && lint && format:check && test && build`                                  |
-| `verify:db`       | `supabase db reset && db lint && test db && gen types && git diff --exit-code`        |
-| `verify:all`      | `verify && deno:check && deno:lint && verify:db && test:pipeline` - to samo, co CI    |
+| Skrypt            | Zawartość                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `typecheck`       | `tsc --noEmit`                                                                                 |
+| `lint`            | `eslint . --max-warnings=0`                                                                    |
+| `format:check`    | `prettier --check .`                                                                           |
+| `test`            | `vitest run`                                                                                   |
+| `test:db`         | `supabase test db` - testy pgTAP: RLS, trigger publikacji, kolejka                             |
+| `test:pipeline`   | smoke całego pipeline'u na fixtures; wchodzi razem z pierwszymi handlerami (etap 1)            |
+| `test:e2e`        | seed opublikowanego artykułu (`scripts/e2e-seed.mjs`) i `playwright test` (sekcja 4.5)         |
+| `perf:budget`     | LCP i CLS na emulowanym telefonie (sekcja 4.7); poza `verify:all` i CI                         |
+| `smoke:prod`      | smoke wdrożonej strony: robots, sitemapy, RSS, JSON-LD (`docs/deployment.md`)                  |
+| `deploy:supabase` | `db push` i `functions deploy` na projekt Supabase Cloud (`docs/deployment.md`)                |
+| `deno:check`      | `deno check --frozen` entrypointów i `_shared/` - typy tak, jak widzi je Edge Runtime          |
+| `deno:lint`       | `deno lint` w `supabase/functions/`                                                            |
+| `env:local`       | generuje `.env.local` z danych działającego lokalnego stacku                                   |
+| `verify`          | `typecheck && lint && format:check && test && build`                                           |
+| `verify:db`       | `supabase db reset && db lint && test db && gen types && git diff --exit-code`                 |
+| `verify:all`      | `verify && deno:check && deno:lint && verify:db && test:pipeline && test:e2e` - to samo, co CI |
 
 Zasada: **to, co robi CI, musi dać się uruchomić jedną komendą lokalnie** (`npm run verify:all`). Bez tego agent nie ma jak sprawdzić pracy przed pushem.
 
@@ -226,6 +228,12 @@ Playwright na zbudowanej aplikacji, mały zestaw smoke:
 - artykuł zawiera poprawny JSON-LD `NewsArticle` z `datePublished` i `dateModified`,
 - brak błędów w konsoli przeglądarki.
 
+Testy są w `e2e/`, konfiguracja w `playwright.config.ts`. Job stawia lokalny Supabase, generuje `.env.local` (`npm run env:local`), buduje aplikację i uruchamia `npm run test:e2e`: skrypt `scripts/e2e-seed.mjs` wstawia jeden opublikowany artykuł zaakceptowany przez redaktora z seeda, a Playwright startuje `next start`. Własny build zamiast artefaktu z joba `build`, bo `NEXT_PUBLIC_*` są wkompilowane w bundle i muszą wskazywać bazę z tego przebiegu.
+
+Lokalnie: działający stack i `.env.local`, `npm run build`, jednorazowo `npx playwright install chromium`, potem `npm run test:e2e`. Chromium spoza cache Playwrighta wskazuje `CHROME_PATH` (np. `/opt/pw-browsers/chromium` w sesjach w chmurze).
+
+Lista źródeł pod artykułem nie jest jeszcze renderowana (PR 4.2a etapu 4); asercja dochodzi razem z nią.
+
 ### 4.6 Bezpieczeństwo - job `security`
 
 - Skan sekretów na całej historii PR (blokujący).
@@ -297,7 +305,8 @@ Rozważone i odrzucone:
 | guard niezmienialności migracji                   | brak w CI                 | wymuszany przez hook `beforeShellExecution` i review; do CI wchodzi razem z pierwszym PR |
 | guard `prompt_version`                            | brak w CI                 | hook `afterFileEdit` przypomina; egzekucja od etapu 2                                    |
 | `pipeline-smoke`                                  | działa, krok w jobie `db` | `npm run test:pipeline` na fixtures LLM (`LLM_ENABLED=false`); bez osobnego checka       |
-| `e2e`, `lighthouse`                               | brak                      | wchodzą z etapem 4                                                                       |
+| `e2e` (Playwright)                                | działa                    | bez listy źródeł pod artykułem - dochodzi z PR 4.2a                                      |
+| `lighthouse`                                      | brak                      | do tego czasu lokalnie `npm run perf:budget`                                             |
 
 Zakazane wzorce (`@ts-ignore`, `any`, `console.log`, `as unknown as`) są egzekwowane przez ESLint, więc blokuje je job `quality` i hook `pre-commit`, a nie osobny skrypt.
 
