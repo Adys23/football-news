@@ -18,3 +18,6 @@ node scripts/scan-secrets.mjs
 
 echo "--> smoke pipeline (RSS -> artykul w review, fixtures LLM)"
 npm run test:pipeline
+
+echo "--> smoke e2e (Playwright na zbudowanej aplikacji)"
+npm run test:e2e
